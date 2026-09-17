@@ -35,7 +35,10 @@ export async function handleStart(request: Request, slug: string, matchMs: numbe
 export async function handleFinish(
   request: Request,
   game: ArcadeGameId,
-  play: (body: Record<string, unknown>, seed: number) => { score: number; comboMax: number } | { error: string },
+  play: (
+    body: Record<string, unknown>,
+    seed: number,
+  ) => { score: number; comboMax: number; [k: string]: unknown } | { error: string },
 ) {
   const ip = clientIp(request)
   if (!rateLimit(`${game}-finish:${ip}`, 60, 60_000)) {
@@ -99,8 +102,7 @@ export async function handleFinish(
 
   return NextResponse.json({
     ok: true,
-    score: result.score,
-    comboMax: result.comboMax,
+    ...result,
     rank: board.rank,
     total: board.total,
     gap: board.gap,

@@ -17,7 +17,7 @@ export function PulsoShell({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <div className="pulso-shell relative h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0A0A0F] text-white antialiased [touch-action:manipulation] [user-select:none]">
+    <div className="pulso-shell relative h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0D1210] text-[#F4E7CF] antialiased [touch-action:manipulation] [user-select:none]">
       {children}
     </div>
   )

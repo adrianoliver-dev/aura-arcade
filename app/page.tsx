@@ -1,5 +1,5 @@
-import { ArcadeHub } from '@/components/arcade/hub'
+import { HeroLanding } from '@/components/hero/landing'
 
 export default function HomePage() {
-  return <ArcadeHub />
+  return <HeroLanding />
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { MATCH_MS } from '@/lib/humo/sim'
+import { MATCH_MS } from '@/lib/pulso/sim'
 import { issueRunToken, newRunId } from '@/lib/pulso/hmac'
 import { clientIp, rateLimit } from '@/lib/pulso/rate-limit'
 

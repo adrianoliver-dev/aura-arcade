@@ -1,29 +1,27 @@
-/** Simulación determinista de AURA: ANTES DEL HUMO. Cliente y server usan el mismo código. */
+/**
+ * Fuente de verdad de AURA: ANTES DEL HUMO.
+ * Cliente y server llaman las mismas funciones. No duplicar fórmulas.
+ */
 
+export const COLS = 12
+export const ROWS = 16
+
+export const TELEGRAPH_MS = 2_000
+export const GUIDE_MS = 4_000
+export const EASY_MS = 12_000
+export const BRANCH_MS = 13_000
+export const CLUTCH_MS = 9_000
+export const RESOLUTION_MS = 7_000
+export const MATCH_MS = TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS + CLUTCH_MS
+export const FREEZE_MS = MATCH_MS
 export const TICK_MS = 16
-export const MATCH_MS = 90_000
-export const COLS = 16
-export const ROWS = 22
-export const HA_PER_CELL = 1
-export const MAX_STROKE_POINTS = 96
-export const FREEZE_MS = 88_000
-
-const WINDOWS: { appearMs: number; commitMs: number; radius: number; spreadMs: number }[] = [
-  { appearMs: 0, commitMs: 8_000, radius: 2, spreadMs: 1_700 },
-  { appearMs: 2_800, commitMs: 11_500, radius: 2, spreadMs: 1_500 },
-  { appearMs: 6_500, commitMs: 16_000, radius: 3, spreadMs: 1_350 },
-  { appearMs: 11_000, commitMs: 21_500, radius: 3, spreadMs: 1_200 },
-  { appearMs: 17_000, commitMs: 28_000, radius: 3, spreadMs: 1_100 },
-  { appearMs: 24_000, commitMs: 35_500, radius: 3, spreadMs: 1_000 },
-  { appearMs: 31_500, commitMs: 42_000, radius: 4, spreadMs: 850 },
-  { appearMs: 40_000, commitMs: 54_000, radius: 4, spreadMs: 800 },
-  { appearMs: 52_000, commitMs: 68_000, radius: 4, spreadMs: 720 },
-  { appearMs: 64_000, commitMs: 80_000, radius: 4, spreadMs: 680 },
-  { appearMs: 76_000, commitMs: 88_000, radius: 4, spreadMs: 640 },
-]
-
-export const FOCO_N = WINDOWS.length
-export const MAX_STROKES = FOCO_N
+export const FOCO_N = 3
+export const TRAVEL_MS_PER_CELL = 180
+export const SNAP_START_CELLS = 2.4
+export const SNAP_END_CELLS = 2.05
+export const REMATCH_KEEP_SEED = 3
+export const TARGET_MIN_PX = 48
+export const TZ = 'America/La_Paz'
 
 export const TERRAIN = {
   path: 0,
@@ -35,25 +33,32 @@ export const TERRAIN = {
 } as const
 
 export type Terrain = (typeof TERRAIN)[keyof typeof TERRAIN]
+export type AssetKind = 'house' | 'water' | 'corral'
+export type CorridorId = 'fast' | 'safe' | 'cut'
+export type EtaBand = 'green' | 'amber' | 'red'
+export type Medal = 'ALERTA' | 'RUTA CLARA' | 'OJO DE FUEGO'
 
 export type Cell = { c: number; r: number }
-
-export type Stroke = {
-  incident: number
-  points: { x: number; y: number }[]
-  t0: number
-  t1: number
-}
+export type Point = { x: number; y: number }
+export type Wind = { c: number; r: number }
 
 export type Incident = {
   id: number
+  kind: AssetKind
   appearMs: number
   commitMs: number
   focus: Cell
   node: Cell
-  wind: Cell
+  wind: Wind
   radius: number
   spreadMs: number
+}
+
+export type Stroke = {
+  incident: number
+  points: Point[]
+  t0: number
+  t1: number
 }
 
 export type World = {
@@ -62,481 +67,651 @@ export type World = {
   rows: number
   terrain: Uint8Array
   node: Cell
+  wind: Wind
   incidents: Incident[]
-  house: Cell
-  shed: Cell
 }
 
 export type IncidentResult = {
   id: number
-  saved: number
-  possible: number
-  efficiency: number
   arrived: boolean
+  saved: number
   cells: Cell[]
-}
-
-export function strokeOnRoad(world: World, stroke: Stroke): boolean {
-  const path = rasterizeStroke(world, stroke.points)
-  if (path.length < 3) return true
-  let road = 0
-  for (let i = 1; i < path.length; i++) {
-    const cell = path[i]!
-    if ((world.terrain[idx(cell.c, cell.r)] as Terrain) === TERRAIN.path) road += 1
-  }
-  return road / (path.length - 1) >= 0.45
+  late: boolean
+  eta: EtaBand
 }
 
 export type SimResult = {
   hectares: number
   efficiency: number
-  remainingMs: number
-  savedByIncident: IncidentResult[]
   rankScore: number
+  medal: Medal
+  savedByIncident: IncidentResult[]
 }
 
-function mulberryStep(rng: number): { rng: number; value: number } {
-  let a = (rng + 0x6d2b79f5) | 0
-  let t = Math.imul(a ^ (a >>> 15), 1 | a)
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-  return { rng: a, value: ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
-}
+export const WINDOWS = [
+  { appearMs: TELEGRAPH_MS, commitMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS },
+  { appearMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS, commitMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS },
+  { appearMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS, commitMs: MATCH_MS },
+] as const
 
-export function idx(c: number, r: number): number {
+const KINDS: AssetKind[] = ['house', 'water', 'corral']
+const RADII = [3, 2, 2]
+const SPREADS = [1_550, 1_180, 860]
+
+function idx(c: number, r: number): number {
   return r * COLS + c
 }
 
-function inBounds(c: number, r: number): boolean {
+function inb(c: number, r: number): boolean {
   return c >= 0 && r >= 0 && c < COLS && r < ROWS
 }
 
-export function costOf(t: Terrain): number {
-  if (t === TERRAIN.water) return 99
-  if (t === TERRAIN.path) return 1
-  if (t === TERRAIN.field) return 1.55
-  if (t === TERRAIN.monte) return 2.35
-  return 2.7
+function hash01(n: number): number {
+  const x = Math.sin(n * 12.9898) * 43758.5453
+  return x - Math.floor(x)
 }
 
-export function walkable(t: Terrain): boolean {
-  return t !== TERRAIN.water
+function mix(a: number, b: number): number {
+  return (Math.imul(a ^ (b + 0x9e3779b9), 1103515245) >>> 0) % 0x7fffffff || 1
 }
 
-function stamp(grid: Uint8Array, c: number, r: number, t: Terrain, rad = 0): void {
-  for (let dr = -rad; dr <= rad; dr++) {
-    for (let dc = -rad; dc <= rad; dc++) {
-      const cc = c + dc
-      const rr = r + dr
-      if (!inBounds(cc, rr)) continue
-      if (t === TERRAIN.water || t === TERRAIN.monte || t === TERRAIN.field) {
-        grid[idx(cc, rr)] = t
-      } else if (dc === 0 && dr === 0) {
-        grid[idx(cc, rr)] = t
+export function dayKey(now = Date.now()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(now))
+}
+
+export function daySeed(now = Date.now()): number {
+  const key = dayKey(now)
+  let h = 2166136261
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619)
+  return (h >>> 0) % 0x7fffffff || 1
+}
+
+export function playSeed(now = Date.now(), rematchIndex = 0): number {
+  const day = daySeed(now)
+  if (rematchIndex < REMATCH_KEEP_SEED) return day
+  return mix(day, rematchIndex + 1)
+}
+
+export function snapStartNorm(): number {
+  return SNAP_START_CELLS / Math.max(COLS, ROWS)
+}
+
+export function snapEndNorm(): number {
+  return SNAP_END_CELLS / Math.max(COLS, ROWS)
+}
+
+export function dist2(a: Point, b: Point): number {
+  const dx = a.x - b.x
+  const dy = a.y - b.y
+  return dx * dx + dy * dy
+}
+
+export function normOfCell(cell: Cell): Point {
+  return { x: (cell.c + 0.5) / COLS, y: (cell.r + 0.5) / ROWS }
+}
+
+export function cellOfNorm(p: Point): Cell {
+  return {
+    c: Math.max(0, Math.min(COLS - 1, Math.floor(p.x * COLS))),
+    r: Math.max(0, Math.min(ROWS - 1, Math.floor(p.y * ROWS))),
+  }
+}
+
+function bresenham(a: Cell, b: Cell): Cell[] {
+  const out: Cell[] = []
+  let c = a.c
+  let r = a.r
+  const dc = Math.abs(b.c - a.c)
+  const dr = Math.abs(b.r - a.r)
+  const sc = a.c < b.c ? 1 : -1
+  const sr = a.r < b.r ? 1 : -1
+  let err = dc - dr
+  for (let n = 0; n < COLS + ROWS + 8; n++) {
+    out.push({ c, r })
+    if (c === b.c && r === b.r) break
+    const e2 = 2 * err
+    if (e2 > -dr) {
+      err -= dr
+      c += sc
+    }
+    if (e2 < dc) {
+      err += dc
+      r += sr
+    }
+  }
+  return out
+}
+
+function paint(grid: Uint8Array, cells: Cell[], ter: Terrain, fat = false) {
+  for (const cell of cells) {
+    if (!inb(cell.c, cell.r)) continue
+    grid[idx(cell.c, cell.r)] = ter
+    if (!fat) continue
+    for (const [dc, dr] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const c = cell.c + dc
+      const r = cell.r + dr
+      if (inb(c, r) && grid[idx(c, r)] !== TERRAIN.water) grid[idx(c, r)] = ter
+    }
+  }
+}
+
+function blob(grid: Uint8Array, cx: number, cy: number, rad: number, ter: Terrain) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (Math.hypot(c - cx, r - cy) <= rad) grid[idx(c, r)] = ter
+    }
+  }
+}
+
+function nearWater(grid: Uint8Array, c: number, r: number): boolean {
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (!inb(c + dc, r + dr)) continue
+      if (grid[idx(c + dc, r + dr)] === TERRAIN.water) return true
+    }
+  }
+  return false
+}
+
+export function travelCost(world: World, cell: Cell): number {
+  const ter = world.terrain[idx(cell.c, cell.r)] as Terrain
+  if (ter === TERRAIN.path) return 10
+  if (ter === TERRAIN.field) return 14
+  if (ter === TERRAIN.house || ter === TERRAIN.shed) return 12
+  if (ter === TERRAIN.monte) return 16
+  if (ter === TERRAIN.water) return nearWater(world.terrain, cell.c, cell.r) ? 18 : 80
+  return 16
+}
+
+function costFast(world: World, cell: Cell): number {
+  const ter = world.terrain[idx(cell.c, cell.r)] as Terrain
+  if (ter === TERRAIN.path) return 8
+  if (ter === TERRAIN.water) return 90
+  return 22
+}
+
+function costSafe(world: World, cell: Cell): number {
+  const ter = world.terrain[idx(cell.c, cell.r)] as Terrain
+  if (ter === TERRAIN.monte) return 9
+  if (ter === TERRAIN.field) return 10
+  if (ter === TERRAIN.path) return 18
+  if (ter === TERRAIN.water) return 90
+  return 14
+}
+
+function costCut(world: World, cell: Cell): number {
+  if (nearWater(world.terrain, cell.c, cell.r)) return 7
+  const ter = world.terrain[idx(cell.c, cell.r)] as Terrain
+  if (ter === TERRAIN.water) return 11
+  if (ter === TERRAIN.path) return 16
+  return 22
+}
+
+export function astar(
+  world: World,
+  start: Cell,
+  goal: Cell,
+  costFn: (world: World, cell: Cell) => number = travelCost,
+): Cell[] | null {
+  const n = COLS * ROWS
+  const dist = new Float64Array(n).fill(1e12)
+  const prev = new Int32Array(n).fill(-1)
+  const seen = new Uint8Array(n)
+  const startI = idx(start.c, start.r)
+  const goalI = idx(goal.c, goal.r)
+  dist[startI] = 0
+  for (let step = 0; step < n; step++) {
+    let best = -1
+    let bestD = 1e12
+    for (let i = 0; i < n; i++) {
+      if (seen[i] || dist[i] >= bestD) continue
+      bestD = dist[i]
+      best = i
+    }
+    if (best < 0) break
+    if (best === goalI) break
+    seen[best] = 1
+    const c = best % COLS
+    const r = Math.floor(best / COLS)
+    for (const [dc, dr] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const nc = c + dc
+      const nr = r + dr
+      if (!inb(nc, nr)) continue
+      const ni = idx(nc, nr)
+      const cost = costFn(world, { c: nc, r: nr })
+      const nd = dist[best] + cost
+      if (nd < dist[ni]) {
+        dist[ni] = nd
+        prev[ni] = best
       }
     }
+  }
+  if (prev[goalI] < 0 && startI !== goalI) return null
+  const path: Cell[] = []
+  let cur = goalI
+  while (cur >= 0) {
+    path.push({ c: cur % COLS, r: Math.floor(cur / COLS) })
+    cur = prev[cur]
+  }
+  path.reverse()
+  if (path[0]?.c !== start.c || path[0]?.r !== start.r) path.unshift(start)
+  return path
+}
+
+function ensurePath(world: World, a: Cell, b: Cell) {
+  if (astar(world, a, b)) return
+  paint(world.terrain, bresenham(a, b), TERRAIN.path)
+}
+
+function clampCell(c: number, r: number): Cell {
+  return {
+    c: Math.max(0, Math.min(COLS - 1, Math.round(c))),
+    r: Math.max(0, Math.min(ROWS - 1, Math.round(r))),
   }
 }
 
 export function createWorld(seed: number): World {
-  let rng = seed | 0
-  const rand = () => {
-    const step = mulberryStep(rng)
-    rng = step.rng
-    return step.value
-  }
-  const irand = (n: number) => Math.floor(rand() * n)
-
+  const s = seed >>> 0 || 1
   const terrain = new Uint8Array(COLS * ROWS)
   terrain.fill(TERRAIN.field)
 
-  const roadC = 3 + irand(4)
-  const roadR = 8 + irand(6)
-  for (let r = 0; r < ROWS; r++) terrain[idx(roadC, r)] = TERRAIN.path
-  for (let c = 0; c < COLS; c++) terrain[idx(c, roadR)] = TERRAIN.path
-  if (rand() > 0.35) {
-    const c2 = Math.min(COLS - 2, roadC + 4 + irand(3))
-    for (let r = Math.max(1, roadR - 6); r < Math.min(ROWS - 1, roadR + 7); r++) {
-      terrain[idx(c2, r)] = TERRAIN.path
+  const node = { c: 1, r: ROWS - 2 }
+  const dirs: Wind[] = [
+    { c: 1, r: 0 },
+    { c: 1, r: -1 },
+    { c: 0, r: -1 },
+    { c: -1, r: -1 },
+    { c: -1, r: 0 },
+    { c: -1, r: 1 },
+    { c: 0, r: 1 },
+    { c: 1, r: 1 },
+  ]
+  const wind = dirs[s % dirs.length]!
+  const len = Math.hypot(wind.c, wind.r) || 1
+  const unit: Wind = { c: wind.c / len, r: wind.r / len }
+
+  const wc = 8 + (s % 3)
+  const wr = 6 + ((s >> 2) % 3)
+  blob(terrain, wc, wr, 1.85, TERRAIN.water)
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (terrain[idx(c, r)] === TERRAIN.water) continue
+      const n = hash01(s * 0.013 + c * 19.1 + r * 7.7)
+      if (n > 0.62 && Math.hypot(c - node.c, r - node.r) > 2.2) terrain[idx(c, r)] = TERRAIN.monte
     }
   }
 
-  for (let i = 0; i < 4; i++) {
-    stamp(terrain, 1 + irand(COLS - 2), 1 + irand(ROWS - 2), TERRAIN.monte, 1 + irand(2))
+  const house = clampCell(5 + (s % 2), ROWS - 8 - ((s >> 3) % 2))
+  const waterAsset = clampCell(wc - 1, wr - 1)
+  const corral = clampCell(COLS - 2, 2 + ((s >> 4) % 2))
+
+  const fastWay = [
+    node,
+    { c: 3, r: ROWS - 4 },
+    { c: 5, r: ROWS - 7 },
+    house,
+    { c: 8, r: 6 },
+    waterAsset,
+    { c: 10, r: 3 },
+    corral,
+  ]
+  const safeWay = [
+    node,
+    { c: 1, r: ROWS - 5 },
+    { c: 1, r: 9 },
+    { c: 2, r: 5 },
+    { c: 6, r: 3 },
+    corral,
+  ]
+  const cutWay = [
+    node,
+    { c: 4, r: ROWS - 3 },
+    { c: wc - 2, r: wr + 1 },
+    { c: wc + 1, r: wr },
+    waterAsset,
+    { c: COLS - 2, r: wr - 2 },
+    corral,
+  ]
+
+  for (let i = 0; i < fastWay.length - 1; i++) paint(terrain, bresenham(fastWay[i]!, fastWay[i + 1]!), TERRAIN.path)
+  for (let i = 0; i < safeWay.length - 1; i++) paint(terrain, bresenham(safeWay[i]!, safeWay[i + 1]!), TERRAIN.path)
+  for (let i = 0; i < cutWay.length - 1; i++) {
+    const cells = bresenham(cutWay[i]!, cutWay[i + 1]!)
+    for (const cell of cells) {
+      if (terrain[idx(cell.c, cell.r)] === TERRAIN.water) continue
+      terrain[idx(cell.c, cell.r)] = TERRAIN.path
+    }
   }
 
-  const pondC = 2 + irand(COLS - 4)
-  const pondR = 2 + irand(ROWS - 4)
-  stamp(terrain, pondC, pondR, TERRAIN.water, 1)
-  terrain[idx(Math.min(COLS - 1, pondC + 1), pondR)] = TERRAIN.water
-
-  const house: Cell = { c: Math.min(COLS - 2, roadC + 1), r: Math.max(1, roadR - 2) }
-  const shed: Cell = { c: Math.max(1, roadC - 1), r: Math.min(ROWS - 2, roadR + 3) }
+  terrain[idx(node.c, node.r)] = TERRAIN.shed
   terrain[idx(house.c, house.r)] = TERRAIN.house
-  terrain[idx(shed.c, shed.r)] = TERRAIN.shed
+  if (inb(house.c + 1, house.r)) terrain[idx(house.c + 1, house.r)] = TERRAIN.house
+  terrain[idx(waterAsset.c, waterAsset.r)] = TERRAIN.shed
+  terrain[idx(corral.c, corral.r)] = TERRAIN.shed
+  if (inb(corral.c - 1, corral.r)) terrain[idx(corral.c - 1, corral.r)] = TERRAIN.shed
 
-  const node: Cell = { c: roadC, r: roadR }
+  const foci = [house, waterAsset, corral]
+  const world: World = {
+    seed: s,
+    cols: COLS,
+    rows: ROWS,
+    terrain,
+    node,
+    wind: unit,
+    incidents: foci.map((focus, id) => ({
+      id,
+      kind: KINDS[id]!,
+      appearMs: WINDOWS[id]!.appearMs,
+      commitMs: WINDOWS[id]!.commitMs,
+      focus,
+      node,
+      wind: unit,
+      radius: RADII[id]!,
+      spreadMs: SPREADS[id]!,
+    })),
+  }
 
-  const used = new Set<string>([`${node.c}:${node.r}`])
-  const incidents: Incident[] = WINDOWS.map((win, id) => {
-    let focus: Cell = { c: node.c, r: node.r }
-    for (let tries = 0; tries < 28; tries++) {
-      const c = 1 + irand(COLS - 2)
-      const r = 1 + irand(ROWS - 2)
-      const t = terrain[idx(c, r)]!
-      const far = Math.abs(c - node.c) + Math.abs(r - node.r) >= 4 + (id % 3)
-      const key = `${c}:${r}`
-      if (walkable(t as Terrain) && t !== TERRAIN.path && far && !used.has(key)) {
-        focus = { c, r }
-        used.add(key)
-        break
-      }
-    }
-    const wind: Cell = {
-      c: rand() > 0.5 ? 1 : -1,
-      r: rand() > 0.45 ? 1 : 0,
-    }
-    return { id, ...win, focus, node, wind }
-  })
-
-  return { seed: seed | 0, cols: COLS, rows: ROWS, terrain, node, incidents, house, shed }
+  for (const inc of world.incidents) ensurePath(world, world.node, inc.focus)
+  return world
 }
 
-export function cellAtNorm(x: number, y: number): Cell {
-  const c = Math.max(0, Math.min(COLS - 1, Math.floor(x * COLS)))
-  const r = Math.max(0, Math.min(ROWS - 1, Math.floor(y * ROWS)))
-  return { c, r }
-}
-
-export function normOfCell(cell: Cell): { x: number; y: number } {
-  return { x: (cell.c + 0.5) / COLS, y: (cell.r + 0.5) / ROWS }
-}
-
-function neighbors(c: number, r: number): Cell[] {
-  const out: Cell[] = []
-  if (c > 0) out.push({ c: c - 1, r })
-  if (c < COLS - 1) out.push({ c: c + 1, r })
-  if (r > 0) out.push({ c, r: r - 1 })
-  if (r < ROWS - 1) out.push({ c, r: r + 1 })
-  return out
-}
-
-function snapWalkable(world: World, cell: Cell): Cell | null {
-  const t = world.terrain[idx(cell.c, cell.r)] as Terrain
-  if (walkable(t)) return cell
-  for (const n of neighbors(cell.c, cell.r)) {
-    if (walkable(world.terrain[idx(n.c, n.r)] as Terrain)) return n
+export function incidentAt(t: number, world: World): Incident | null {
+  for (const inc of world.incidents) {
+    if (t >= inc.appearMs && t < inc.commitMs) return inc
   }
   return null
 }
 
-function lineCells(a: Cell, b: Cell): Cell[] {
-  const cells: Cell[] = []
-  let x0 = a.c
-  let y0 = a.r
-  const x1 = b.c
-  const y1 = b.r
-  const dx = Math.abs(x1 - x0)
-  const dy = Math.abs(y1 - y0)
-  const sx = x0 < x1 ? 1 : -1
-  const sy = y0 < y1 ? 1 : -1
-  let err = dx - dy
-  while (true) {
-    cells.push({ c: x0, r: y0 })
-    if (x0 === x1 && y0 === y1) break
-    const e2 = 2 * err
-    if (e2 > -dy) {
-      err -= dy
-      x0 += sx
-    }
-    if (e2 < dx) {
-      err += dx
-      y0 += sy
-    }
-  }
-  return cells
+export function isTelegraph(t: number): boolean {
+  return t < TELEGRAPH_MS
 }
 
-export function rasterizeStroke(world: World, points: { x: number; y: number }[]): Cell[] {
+export function isGuiding(t: number): boolean {
+  return t >= TELEGRAPH_MS && t < TELEGRAPH_MS + GUIDE_MS
+}
+
+export function isClutch(t: number, inc: Incident | null): boolean {
+  if (!inc) return false
+  return inc.id === FOCO_N - 1 && t >= inc.appearMs && t < inc.commitMs
+}
+
+export function firstGuidePath(world: World): Cell[] {
+  const focus = world.incidents[0]!.focus
+  return astar(world, world.node, focus) ?? bresenham(world.node, focus)
+}
+
+export function travelMsForCells(world: World, cells: Cell[]): number {
+  let ms = 0
+  for (const cell of cells) {
+    const ter = world.terrain[idx(cell.c, cell.r)] as Terrain
+    if (ter === TERRAIN.path) ms += 85
+    else if (ter === TERRAIN.monte) ms += 165
+    else if (ter === TERRAIN.water) ms += 230
+    else if (ter === TERRAIN.field) ms += 125
+    else ms += 110
+  }
+  return ms
+}
+
+export function assetDeadlineMs(incident: Incident): number {
+  const window = Math.max(1, incident.commitMs - incident.appearMs)
+  const frac = incident.id === 0 ? 0.5 : incident.id === 2 ? 0.7 : 0.55
+  return incident.appearMs + window * frac
+}
+
+export function fireTimeMs(incident: Incident, cell: Cell): number {
+  const dx = cell.c - incident.focus.c
+  const dy = cell.r - incident.focus.r
+  const dist = Math.hypot(dx, dy)
+  const origin = assetDeadlineMs(incident)
+  const windDot = dist < 0.001 ? 1 : (dx * incident.wind.c + dy * incident.wind.r) / dist
+  const aligned = (windDot + 1) / 2
+  return origin + dist * incident.spreadMs * (0.7 - aligned * 0.32)
+}
+
+export function assetCells(world: World, inc: Incident): Cell[] {
+  const out: Cell[] = []
+  const extra =
+    inc.kind === 'house'
+      ? [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+        ]
+      : inc.kind === 'water'
+        ? [
+            [0, 0],
+            [1, 0],
+            [0, -1],
+          ]
+        : [
+            [0, 0],
+            [-1, 0],
+            [0, 1],
+            [1, 0],
+          ]
+  for (const [dc, dr] of extra) {
+    const c = inc.focus.c + dc
+    const r = inc.focus.r + dr
+    if (inb(c, r)) out.push({ c, r })
+  }
+  void world
+  return out
+}
+
+export function rasterizeStroke(world: World, points: Point[]): Cell[] {
   const cells: Cell[] = []
   const push = (cell: Cell) => {
     const last = cells[cells.length - 1]
     if (last && last.c === cell.c && last.r === cell.r) return
     cells.push(cell)
   }
-  let prev: Cell | null = null
-  for (const p of points) {
-    const raw = cellAtNorm(p.x, p.y)
-    const snapped = snapWalkable(world, raw)
-    if (!snapped) continue
-    if (prev) {
-      for (const step of lineCells(prev, snapped)) {
-        const walk = snapWalkable(world, step)
-        if (walk) push(walk)
-      }
-    } else {
-      push(snapped)
-    }
-    prev = snapped
+  if (points.length === 0) return cells
+  if (points.length === 1) {
+    push(cellOfNorm(points[0]!))
+    return cells
   }
-  return cells.slice(0, 80)
+  for (let i = 1; i < points.length; i++) {
+    const a = cellOfNorm(points[i - 1]!)
+    const b = cellOfNorm(points[i]!)
+    for (const cell of bresenham(a, b)) push(cell)
+  }
+  return cells
 }
 
-function distManhattan(a: Cell, b: Cell): number {
-  return Math.abs(a.c - b.c) + Math.abs(a.r - b.r)
+export function strokeOnRoad(world: World, stroke: Stroke): boolean {
+  const cells = rasterizeStroke(world, stroke.points)
+  if (cells.length === 0) return false
+  let path = 0
+  for (const cell of cells) {
+    if (world.terrain[idx(cell.c, cell.r)] === TERRAIN.path) path++
+  }
+  return path / cells.length >= 0.45
 }
 
-function distChebyshev(a: Cell, b: Cell): number {
-  return Math.max(Math.abs(a.c - b.c), Math.abs(a.r - b.r))
+function nearNode(world: World, pt: Point): boolean {
+  return dist2(pt, normOfCell(world.node)) <= snapStartNorm() ** 2
 }
 
-export function astar(world: World, start: Cell, goal: Cell): Cell[] | null {
-  const key = (c: Cell) => `${c.c}:${c.r}`
-  const open: Cell[] = [start]
-  const came = new Map<string, Cell>()
-  const g = new Map<string, number>([[key(start), 0]])
-  const f = new Map<string, number>([[key(start), distManhattan(start, goal)]])
-
-  while (open.length) {
-    open.sort((a, b) => (f.get(key(a)) ?? 1e9) - (f.get(key(b)) ?? 1e9))
-    const cur = open.shift()!
-    if (cur.c === goal.c && cur.r === goal.r) {
-      const path = [cur]
-      let k = key(cur)
-      while (came.has(k)) {
-        const prev = came.get(k)!
-        path.push(prev)
-        k = key(prev)
-      }
-      path.reverse()
-      return path
-    }
-    for (const n of neighbors(cur.c, cur.r)) {
-      const ter = world.terrain[idx(n.c, n.r)] as Terrain
-      if (!walkable(ter)) continue
-      const tentative = (g.get(key(cur)) ?? 1e9) + costOf(ter)
-      const nk = key(n)
-      if (tentative < (g.get(nk) ?? 1e9)) {
-        came.set(nk, cur)
-        g.set(nk, tentative)
-        f.set(nk, tentative + distManhattan(n, goal))
-        if (!open.some((o) => o.c === n.c && o.r === n.r)) open.push(n)
-      }
-    }
+function nearFocus(world: World, inc: Incident, pt: Point): boolean {
+  if (dist2(pt, normOfCell(inc.focus)) <= snapEndNorm() ** 2) return true
+  for (const cell of assetCells(world, inc)) {
+    if (dist2(pt, normOfCell(cell)) <= (snapEndNorm() * 0.92) ** 2) return true
   }
-  return null
+  return false
 }
 
-export function pathCost(world: World, path: Cell[]): number {
-  let sum = 0
-  for (let i = 1; i < path.length; i++) {
-    const cell = path[i]!
-    sum += costOf(world.terrain[idx(cell.c, cell.r)] as Terrain)
-  }
-  return sum
+export function snapStart(world: World, pt: Point): { ok: boolean; snapped: Point } {
+  if (!nearNode(world, pt)) return { ok: false, snapped: pt }
+  return { ok: true, snapped: normOfCell(world.node) }
 }
 
-export function assetCells(world: World, incident: Incident): Cell[] {
-  const out: Cell[] = []
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (distChebyshev({ c, r }, incident.focus) > incident.radius) continue
-      const t = world.terrain[idx(c, r)] as Terrain
-      if (t === TERRAIN.water) continue
-      out.push({ c, r })
-    }
-  }
-  return out
+export function snapEnd(world: World, inc: Incident, pt: Point): { ok: boolean; snapped: Point } {
+  if (!nearFocus(world, inc, pt)) return { ok: false, snapped: pt }
+  return { ok: true, snapped: normOfCell(inc.focus) }
 }
 
-export function fireTimeMs(incident: Incident, cell: Cell): number {
-  const base = distChebyshev(incident.focus, cell)
-  const align =
-    incident.wind.c * Math.sign(cell.c - incident.focus.c) + incident.wind.r * Math.sign(cell.r - incident.focus.r)
-  const wind = 1 - 0.12 * Math.max(-1, Math.min(1, align))
-  return incident.appearMs + base * incident.spreadMs * wind
+function etaFromSlack(slack: number): EtaBand {
+  if (slack > 1_600) return 'green'
+  if (slack > 0) return 'amber'
+  return 'red'
 }
 
-const MS_PER_COST = 70
+export function previewEta(world: World, incident: Incident, points: Point[], nowMs: number): EtaBand {
+  const cells = rasterizeStroke(world, points)
+  const last = cells[cells.length - 1] ?? world.node
+  const remain = astar(world, last, incident.focus) ?? bresenham(last, incident.focus)
+  const arrival = nowMs + travelMsForCells(world, remain)
+  return etaFromSlack(assetDeadlineMs(incident) - arrival)
+}
 
-export function resolveIncident(
-  world: World,
-  incident: Incident,
-  stroke: Stroke | undefined,
-  startFrom: Cell = incident.node,
-): IncidentResult {
-  const possibleCells = assetCells(world, incident)
-  const possible = possibleCells.length
-  const empty = { id: incident.id, saved: 0, possible, efficiency: 0, arrived: false, cells: [] as Cell[] }
-  if (!stroke || stroke.points.length < 2) {
-    return empty
-  }
+export function resolveIncident(world: World, incident: Incident, stroke: Stroke | null): IncidentResult {
+  const empty: IncidentResult = { id: incident.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red' }
+  if (!stroke || stroke.points.length < 2) return empty
+  const first = stroke.points[0]!
+  const last = stroke.points[stroke.points.length - 1]!
+  if (!nearNode(world, first) && !nearNode(world, stroke.points[1] ?? first)) return empty
+  if (!nearFocus(world, incident, last)) return empty
+  if (stroke.t1 < incident.appearMs || stroke.t0 >= incident.commitMs) return empty
 
-  const path = rasterizeStroke(world, stroke.points)
-  if (path.length < 2) {
-    return empty
-  }
-
-  const start = path[0]!
-  const fromHq = distManhattan(start, incident.node) <= 3
-  const fromBrigade = distManhattan(start, startFrom) <= 3
-  if (!fromHq && !fromBrigade) {
-    return empty
-  }
-
-  const origin = fromBrigade ? startFrom : incident.node
-  const prefix = astar(world, origin, start) ?? [origin]
-  const full = [...prefix, ...path.slice(1)]
-  const travel = pathCost(world, full) * MS_PER_COST
-  const t1 = Math.max(incident.appearMs, Math.min(MATCH_MS, stroke.t1))
-  const arrival = t1 + travel
-  const arrived = distManhattan(path[path.length - 1]!, incident.focus) <= 2
-
-  const cells: Cell[] = []
-  if (arrived) {
-    for (const cell of possibleCells) {
-      if (arrival < fireTimeMs(incident, cell)) cells.push(cell)
+  const cells = rasterizeStroke(world, stroke.points)
+  const arrival = Math.max(stroke.t0, stroke.t1) + travelMsForCells(world, cells)
+  const fireAt = assetDeadlineMs(incident)
+  const slack = fireAt - arrival
+  const eta = etaFromSlack(slack)
+  const late = slack <= 1_600
+  const savedCells: Cell[] = []
+  for (let r = incident.focus.r - incident.radius; r <= incident.focus.r + incident.radius; r++) {
+    for (let c = incident.focus.c - incident.radius; c <= incident.focus.c + incident.radius; c++) {
+      if (!inb(c, r)) continue
+      const cell = { c, r }
+      if (world.terrain[idx(c, r)] === TERRAIN.water) continue
+      if (fireTimeMs(incident, cell) <= arrival) continue
+      savedCells.push(cell)
     }
   }
+  return { id: incident.id, arrived: savedCells.length > 0, saved: savedCells.length, cells: savedCells, late, eta }
+}
 
-  const ideal = astar(world, origin, incident.focus)
-  const idealCost = ideal ? pathCost(world, ideal) : pathCost(world, path)
-  const playerCost = Math.max(pathCost(world, full), 0.01)
-  const efficiency = Math.max(0, Math.min(1, idealCost / playerCost))
+function medalFor(rows: IncidentResult[]): Medal {
+  const onTime = rows.filter((row) => row.arrived && !row.late).length
+  const arrived = rows.filter((row) => row.arrived).length
+  if (onTime === FOCO_N) return 'OJO DE FUEGO'
+  if (arrived >= 2) return 'RUTA CLARA'
+  return 'ALERTA'
+}
 
-  return { id: incident.id, saved: cells.length, possible, efficiency, arrived, cells }
+export function scoreFromRows(rows: IncidentResult[]): Pick<SimResult, 'hectares' | 'efficiency' | 'rankScore' | 'medal'> {
+  const hectares = rows.reduce((sum, row) => sum + row.saved, 0)
+  const arrived = rows.filter((row) => row.arrived).length
+  const cap = arrived * 14
+  const efficiency = cap > 0 ? Math.min(100, Math.round((hectares / cap) * 100)) : 0
+  return {
+    hectares,
+    efficiency,
+    rankScore: hectares * 1000 + efficiency,
+    medal: medalFor(rows),
+  }
 }
 
 export function simulateRun(seed: number, strokes: Stroke[]): SimResult {
   const world = createWorld(seed)
-  const ordered = [...strokes]
-    .filter((s) => s.incident >= 0 && s.incident < FOCO_N)
-    .sort((a, b) => a.t1 - b.t1 || a.t0 - b.t0)
-  const seen = new Set<number>()
-  const byId: IncidentResult[] = world.incidents.map((inc) => resolveIncident(world, inc, undefined))
-  let brigade = world.node
-  let combo = 0
-  let hectares = 0
-  for (const stroke of ordered) {
-    if (seen.has(stroke.incident)) continue
-    const inc = world.incidents[stroke.incident]
-    if (!inc) continue
-    seen.add(stroke.incident)
-    const resolved = resolveIncident(world, inc, stroke, brigade)
-    let saved = resolved.saved
-    if (resolved.arrived && resolved.saved > 0) {
-      combo += 1
-      if (combo > 1) saved += Math.floor(resolved.saved * 0.18 * Math.min(combo - 1, 4))
-      brigade = inc.focus
-    } else {
-      combo = 0
+  const used = new Set<number>()
+  const savedByIncident: IncidentResult[] = world.incidents.map((inc) => {
+    const stroke = strokes.find((row) => row.incident === inc.id && !used.has(row.incident)) ?? null
+    if (stroke) used.add(inc.id)
+    if (stroke && (stroke.t1 < inc.appearMs || stroke.t0 >= inc.commitMs)) {
+      return { id: inc.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red' as const }
     }
-    byId[inc.id] = { ...resolved, saved }
-    hectares += saved * HA_PER_CELL
+    return resolveIncident(world, inc, stroke)
+  })
+  return { ...scoreFromRows(savedByIncident), savedByIncident }
+}
+
+export function corridorCells(world: World, incidentId: number, corridor: CorridorId): Cell[] {
+  const inc = world.incidents[incidentId]
+  if (!inc) return []
+  const fn = corridor === 'fast' ? costFast : corridor === 'safe' ? costSafe : costCut
+  return astar(world, world.node, inc.focus, fn) ?? firstGuidePath(world)
+}
+
+export function corridorStroke(world: World, incidentId: number, corridor: CorridorId, t0: number): Stroke {
+  const inc = world.incidents[incidentId]!
+  const cells = corridorCells(world, incidentId, corridor)
+  let extra = 0
+  if (corridor === 'cut') {
+    const dot = (inc.focus.c - world.node.c) * world.wind.c + (inc.focus.r - world.node.r) * world.wind.r
+    extra = dot < 0 ? 4_800 : -280
   }
-  const efficiency = Math.round((byId.reduce((n, r) => n + r.efficiency, 0) / FOCO_N) * 100)
-  const lastCommit = Math.max(0, ...strokes.map((s) => s.t1))
-  const remainingMs = Math.max(0, MATCH_MS - Math.min(MATCH_MS, lastCommit || FREEZE_MS))
-  const rankScore = hectares * 100 + efficiency + Math.round(remainingMs / 400)
+  if (corridor === 'safe') extra += 2_400
+  const t1 = Math.min(inc.commitMs - 30, t0 + 280 + extra)
   return {
-    hectares,
-    efficiency,
-    remainingMs,
-    savedByIncident: byId,
-    rankScore,
+    incident: incidentId,
+    points: cells.map(normOfCell),
+    t0,
+    t1,
   }
 }
 
 export function optimalStrokes(seed: number): Stroke[] {
   const world = createWorld(seed)
   return world.incidents.map((inc) => {
-    const path = astar(world, inc.node, inc.focus) ?? [inc.node, inc.focus]
-    return {
-      incident: inc.id,
-      points: path.map(normOfCell),
-      t0: inc.appearMs + 400,
-      t1: inc.appearMs + 900,
-    }
+    const t0 = inc.appearMs + (inc.id === 0 ? GUIDE_MS * 0.25 : 180)
+    return corridorStroke(world, inc.id, 'fast', t0)
   })
 }
 
+export function parseStrokes(raw: unknown): Stroke[] | null {
+  if (!Array.isArray(raw)) return null
+  const out: Stroke[] = []
+  for (const row of raw) {
+    if (!row || typeof row !== 'object') return null
+    const rec = row as Record<string, unknown>
+    const incident = Number(rec.incident)
+    const t0 = Number(rec.t0)
+    const t1 = Number(rec.t1)
+    if (!Number.isInteger(incident) || incident < 0 || incident >= FOCO_N) return null
+    if (!Number.isFinite(t0) || !Number.isFinite(t1)) return null
+    if (!Array.isArray(rec.points) || rec.points.length < 1 || rec.points.length > 128) return null
+    const points: Point[] = []
+    for (const p of rec.points) {
+      if (!p || typeof p !== 'object') return null
+      const x = Number((p as { x?: unknown }).x)
+      const y = Number((p as { y?: unknown }).y)
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+      points.push({ x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) })
+    }
+    out.push({ incident, points, t0, t1 })
+  }
+  return out
+}
+
 export function encodeShareSeed(seed: number): string {
-  return (seed >>> 0).toString(36).toUpperCase()
+  return (seed >>> 0).toString(36)
 }
 
 export function parseShareSeed(raw: string | null | undefined): number | null {
   if (!raw) return null
-  const s = raw.trim().toUpperCase()
-  if (!/^[1-9A-Z][0-9A-Z]*$/.test(s)) return null
-  const n = Number.parseInt(s, 36)
+  const n = parseInt(raw, 36)
   if (!Number.isInteger(n) || n <= 0 || n > 0x7fffffff) return null
-  if (encodeShareSeed(n) !== s) return null
-  return n | 0
+  return n
 }
 
-export function incidentAt(t: number, world: World): Incident | null {
-  const live = liveIncidents(t, world)
-  if (!live.length) return null
-  return live.reduce((a, b) => (a.commitMs - t <= b.commitMs - t ? a : b))
-}
-
-export function liveIncidents(t: number, world: World, done?: Iterable<number>): Incident[] {
-  const closed = done ? new Set(done) : null
-  return world.incidents.filter((inc) => {
-    if (closed?.has(inc.id)) return false
-    return t >= inc.appearMs && t < inc.commitMs
+export function reachable(seed: number): boolean {
+  const world = createWorld(seed)
+  return world.incidents.every((inc) => {
+    const path = astar(world, world.node, inc.focus)
+    return Boolean(path && path.length > 1)
   })
-}
-
-export function nearestIncident(
-  pt: { x: number; y: number },
-  incidents: Incident[],
-): Incident | null {
-  let best: Incident | null = null
-  let bestD = Infinity
-  for (const inc of incidents) {
-    const focus = normOfCell(inc.focus)
-    const dx = pt.x - focus.x
-    const dy = pt.y - focus.y
-    const d = dx * dx + dy * dy
-    if (d < bestD) {
-      bestD = d
-      best = inc
-    }
-  }
-  return best
-}
-
-function clamp01(n: number): number {
-  return Math.max(0, Math.min(1, n))
-}
-
-export function parseStrokes(raw: unknown): Stroke[] | null {
-  if (!Array.isArray(raw) || raw.length > MAX_STROKES) return null
-  const out: Stroke[] = []
-  for (const item of raw) {
-    if (!item || typeof item !== 'object') return null
-    const rec = item as Record<string, unknown>
-    const incident = Number(rec.incident)
-    if (!Number.isInteger(incident) || incident < 0 || incident >= FOCO_N) return null
-    if (!Array.isArray(rec.points) || rec.points.length > MAX_STROKE_POINTS) return null
-    const points: { x: number; y: number }[] = []
-    for (const point of rec.points) {
-      if (!point || typeof point !== 'object') return null
-      const xy = point as { x?: unknown; y?: unknown }
-      const x = Number(xy.x)
-      const y = Number(xy.y)
-      if (!Number.isFinite(x) || !Number.isFinite(y)) return null
-      points.push({ x: clamp01(x), y: clamp01(y) })
-    }
-    const t0 = Number(rec.t0)
-    const t1 = Number(rec.t1)
-    if (!Number.isFinite(t0) || !Number.isFinite(t1)) return null
-    out.push({
-      incident,
-      points,
-      t0: Math.max(0, Math.min(MATCH_MS, t0)),
-      t1: Math.max(0, Math.min(MATCH_MS, t1)),
-    })
-  }
-  return out
 }

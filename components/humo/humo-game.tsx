@@ -2,36 +2,37 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
+import { BOOT_BUDGET_MS, FETCH_BUDGET_MS, fetchWithTimeout, withTimeout } from '@/lib/arcade/fetch-timeout'
 import { humoCopy } from '@/lib/humo/copy'
 import {
-  FREEZE_MS,
   FOCO_N,
   MATCH_MS,
   TICK_MS,
   astar,
-  assetCells,
   createWorld,
+  firstGuidePath,
   incidentAt,
+  isGuiding,
+  isTelegraph,
   normOfCell,
+  playSeed,
+  previewEta,
   resolveIncident,
   simulateRun,
-  strokeOnRoad,
-  type Incident,
+  snapEnd,
+  snapStart,
+  type EtaBand,
   type Stroke,
   type World,
 } from '@/lib/humo/sim'
 import {
-  humoMission,
   loadIdentity,
   loadPersonalBest,
-  loadPlays,
   savePersonalBest,
-  type HumoMission,
 } from '@/lib/pulso/camba'
 import type { BoardEntry } from '@/lib/pulso/types'
-
 import {
-  getPulsoMuteSnapshot,
+  isPulsoMuted,
   playHumoClutch,
   playHumoSave,
   playHumoWhoosh,
@@ -41,17 +42,13 @@ import {
   subscribePulsoMute,
   unlockPulsoAudio,
 } from '@/components/pulso/pulso-audio'
-
-import { ArcadeHud } from '@/components/arcade/arcade-hud'
-import { ArcadeReady } from '@/components/arcade/arcade-ready'
-import { saveGameBest } from '@/lib/arcade/liga'
-import { addXp, xpFromScore } from '@/lib/arcade/progress'
 import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import { HumoEndScreen } from './humo-end-screen'
 import {
   drawFrame,
   gridLayout,
   spawnBurst,
+  spawnWind,
   stepParticles,
   type FlashTint,
   type Floater,
@@ -64,32 +61,41 @@ import {
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
-function snapTol(incidentId: number): number {
-  if (incidentId <= 0) return 0.058
-  if (incidentId === 1) return 0.034
-  return 0.02
-}
+type Props = { demo?: boolean; challengeSeed?: number | null }
 
-function nearFocus(pt: { x: number; y: number }, inc: Incident, world: World): boolean {
-  const focus = normOfCell(inc.focus)
-  const dx = pt.x - focus.x
-  const dy = pt.y - focus.y
-  const tol = snapTol(inc.id)
-  if (dx * dx + dy * dy <= tol) return true
-  const cells = assetCells(world, inc)
-  for (const cell of cells) {
-    const cx = (cell.c + 0.5) / world.cols
-    const cy = (cell.r + 0.5) / world.rows
-    const ex = pt.x - cx
-    const ey = pt.y - cy
-    if (ex * ex + ey * ey <= tol * 0.72) return true
+function rematchCount(): number {
+  try {
+    return Number(sessionStorage.getItem('humo:rematch') || '0') || 0
+  } catch {
+    return 0
   }
-  return false
 }
 
-type Props = {
-  demo?: boolean
-  challengeSeed?: number | null
+function bumpRematch() {
+  try {
+    sessionStorage.setItem('humo:rematch', String(rematchCount() + 1))
+  } catch {
+    /* private */
+  }
+}
+
+function cacheBoard(today: BoardEntry[]) {
+  try {
+    localStorage.setItem('humo:board', JSON.stringify({ at: Date.now(), today }))
+  } catch {
+    /* private */
+  }
+}
+
+function readCachedBoard(): BoardEntry[] {
+  try {
+    const raw = localStorage.getItem('humo:board')
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as { today?: BoardEntry[] }
+    return parsed.today ?? []
+  } catch {
+    return []
+  }
 }
 
 export function HumoGame({ demo = false, challengeSeed = null }: Props) {
@@ -99,55 +105,34 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
   const tRef = useRef(0)
   const strokesRef = useRef<Stroke[]>([])
   const drawingRef = useRef<Stroke | null>(null)
+  const seedRef = useRef(1)
   const tokenRef = useRef<string | null>(null)
-  const seedRef = useRef(0)
+  const identityRef = useRef({ alias: 'Camba', tag: 'SCZ' })
+  const accRef = useRef(0)
+  const lastRef = useRef(0)
+  const layoutRef = useRef<GridLayout>(gridLayout(390, 700))
   const juiceRef = useRef<Juice[]>([])
   const particlesRef = useRef<Particle[]>([])
   const floatersRef = useRef<Floater[]>([])
-  const accRef = useRef(0)
-  const lastRef = useRef(0)
-  const lastHudRef = useRef(0)
-  const lastPreviewRef = useRef(0)
-  const identityRef = useRef({ alias: 'Yacare', tag: 'SCZ' })
-  const layoutRef = useRef<GridLayout>({ ox: 0, oy: 0, cell: 1, gridW: 1, gridH: 1 })
-  const missedRef = useRef(new Set<number>())
   const savedRef = useRef<SavedCell[]>([])
   const ghostRef = useRef<{ c: number; r: number }[]>([])
+  const shocksRef = useRef<Shock[]>([])
+  const runnerRef = useRef<{ points: { x: number; y: number }[]; born: number } | null>(null)
   const announcedRef = useRef(new Set<number>())
   const clutchRef = useRef(new Set<number>())
-  const rachaRef = useRef(0)
-  const shakeRef = useRef(0)
-  const flashRef = useRef(0)
-  const flashTintRef = useRef<FlashTint>('fire')
-  const shocksRef = useRef<Shock[]>([])
-  const onRoadRef = useRef(true)
-  const runnerRef = useRef<{ points: { x: number; y: number }[]; born: number } | null>(null)
-  const demoDrawRef = useRef<{ id: number; points: { x: number; y: number }[]; born: number } | null>(null)
-  const movedRef = useRef(false)
+  const missedRef = useRef(new Set<number>())
   const downPtRef = useRef<{ x: number; y: number } | null>(null)
-  const [grabbing, setGrabbing] = useState(false)
-
-  const muted = useSyncExternalStore(subscribePulsoMute, getPulsoMuteSnapshot, () => false)
+  const movedRef = useRef(false)
+  const lastPreviewRef = useRef(0)
+  const lastHudRef = useRef(0)
+  const hectaresRef = useRef(0)
+  const etaRef = useRef<EtaBand | null>(null)
+  const reducedRef = useRef(false)
 
   const [phase, setPhase] = useState<Phase>('boot')
-  const [identity, setIdentity] = useState({ alias: '', tag: 'SCZ' })
   const [runToken, setRunToken] = useState<string | null>(null)
-  const [toBeat, setToBeat] = useState(0)
-  const [mission, setMission] = useState<HumoMission | null>(null)
-  const [hud, setHud] = useState({
-    hectares: 0,
-    efficiency: 0,
-    left: MATCH_MS,
-    foco: 0,
-    freeze: false,
-    ghost: 0,
-    window: 0,
-    racha: 0,
-    clutch: false,
-    windowMax: 1,
-    canAct: false,
-    saved: 0,
-  })
+  const [offline, setOffline] = useState(false)
+  const [hud, setHud] = useState({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint as string })
   const [result, setResult] = useState<{
     hectares: number
     efficiency: number
@@ -157,8 +142,10 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     gap: number
     today: BoardEntry[]
     personalBest: number
-    plays: number
+    medal: string
   } | null>(null)
+  const [toBeat, setToBeat] = useState(0)
+  const muted = useSyncExternalStore(subscribePulsoMute, isPulsoMuted, isPulsoMuted)
 
   const setPhaseBoth = (next: Phase) => {
     phaseRef.current = next
@@ -166,7 +153,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
   }
 
   const pushJuice = (label: string, color: string, scale = 1) => {
-    juiceRef.current.push({ label, color, born: performance.now(), scale })
+    juiceRef.current = [{ label, color, born: performance.now(), scale }, ...juiceRef.current].slice(0, 4)
   }
 
   const resetFx = () => {
@@ -175,80 +162,72 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     floatersRef.current = []
     savedRef.current = []
     ghostRef.current = []
-    missedRef.current = new Set()
+    shocksRef.current = []
+    runnerRef.current = null
     announcedRef.current = new Set()
     clutchRef.current = new Set()
-    rachaRef.current = 0
-    shakeRef.current = 0
-    flashRef.current = 0
-    flashTintRef.current = 'fire'
-    shocksRef.current = []
-    onRoadRef.current = true
-    demoDrawRef.current = null
+    missedRef.current = new Set()
     drawingRef.current = null
     strokesRef.current = []
-    runnerRef.current = null
+    hectaresRef.current = 0
+    etaRef.current = null
   }
 
   const startRun = useCallback(async () => {
     setResult(null)
     setRunToken(null)
+    tokenRef.current = null
     accRef.current = 0
     tRef.current = 0
-    tokenRef.current = null
     resetFx()
     resetPulsoRushFlag()
-    setMission(humoMission())
-    try {
-      const boardRes = await fetch('/api/pulso/leaderboard', { cache: 'no-store' })
-      if (boardRes.ok) {
-        const board = (await boardRes.json()) as { today?: BoardEntry[] }
-        setToBeat(board.today?.[0]?.score ?? 0)
+    setPhaseBoth('boot')
+    const localSeed = challengeSeed || playSeed(Date.now(), rematchCount())
+    seedRef.current = localSeed
+    identityRef.current = loadIdentity(String(localSeed))
+    const cached = readCachedBoard()
+    if (cached[0]) setToBeat(cached[0].score)
+
+    const boot = async () => {
+      try {
+        const boardRes = await fetchWithTimeout('/api/humo/leaderboard', { cache: 'no-store', timeoutMs: FETCH_BUDGET_MS })
+        if (boardRes.ok) {
+          const board = (await boardRes.json()) as { today?: BoardEntry[] }
+          const today = board.today ?? []
+          cacheBoard(today)
+          setToBeat(today[0]?.score ?? 0)
+        }
+      } catch {
+        /* cache */
       }
-    } catch {
-      setToBeat(0)
+      try {
+        const res = await fetchWithTimeout('/api/humo/run/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(challengeSeed ? { seed: challengeSeed, rematch: rematchCount() } : { rematch: rematchCount() }),
+          timeoutMs: FETCH_BUDGET_MS,
+        })
+        if (res.ok) {
+          const data = (await res.json()) as { seed: number; token: string }
+          seedRef.current = data.seed
+          tokenRef.current = data.token
+          setRunToken(data.token)
+          setOffline(false)
+          return
+        }
+      } catch {
+        /* local */
+      }
+      setOffline(true)
     }
+
     try {
-      const res = await fetch('/api/pulso/run/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(challengeSeed ? { seed: challengeSeed } : {}),
-      })
-      if (res.ok) {
-        const data = (await res.json()) as { seed: number; token: string; runId?: string }
-        seedRef.current = data.seed
-        tokenRef.current = data.token
-        setRunToken(data.token)
-        const nextId = loadIdentity(data.runId || String(data.seed))
-        identityRef.current = nextId
-        setIdentity(nextId)
-      } else {
-        seedRef.current = challengeSeed || ((Date.now() ^ 0x9e3779b9) >>> 0) || 1
-        const nextId = loadIdentity(String(seedRef.current))
-        identityRef.current = nextId
-        setIdentity(nextId)
-      }
+      await withTimeout(boot(), BOOT_BUDGET_MS)
     } catch {
-      seedRef.current = challengeSeed || ((Date.now() ^ 0x9e3779b9) >>> 0) || 1
-      const nextId = loadIdentity(String(seedRef.current))
-      identityRef.current = nextId
-      setIdentity(nextId)
+      setOffline(true)
     }
     worldRef.current = createWorld(seedRef.current)
-    setHud({
-      hectares: 0,
-      efficiency: 0,
-      left: MATCH_MS,
-      foco: 0,
-      freeze: false,
-      ghost: 0,
-      window: 0,
-      racha: 0,
-      clutch: false,
-      windowMax: 1,
-      canAct: false,
-      saved: 0,
-    })
+    setHud({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint })
     setPhaseBoth('ready')
   }, [challengeSeed])
 
@@ -256,20 +235,15 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     const id = window.setTimeout(() => {
       void startRun()
     }, 0)
+    reducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     return () => window.clearTimeout(id)
   }, [startRun])
 
   const finish = useCallback(async () => {
-    const id = identityRef.current
     const prevBest = loadPersonalBest()
     const localSim = simulateRun(seedRef.current, strokesRef.current)
     const arrived = localSim.savedByIncident.filter((row) => row.arrived).length
-    const payload = {
-      token: tokenRef.current,
-      strokes: strokesRef.current,
-      alias: id.alias,
-      tag: id.tag,
-    }
+    savePersonalBest(localSim.hectares)
     const local = {
       hectares: localSim.hectares,
       efficiency: localSim.efficiency,
@@ -277,137 +251,89 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
       rank: null as number | null,
       total: 0,
       gap: 0,
-      today: [] as BoardEntry[],
+      today: readCachedBoard(),
       personalBest: prevBest,
-      plays: loadPlays() + 1,
+      medal: localSim.medal,
     }
-    savePersonalBest(localSim.hectares)
-    saveGameBest('humo', localSim.hectares)
-    addXp(xpFromScore(localSim.hectares))
     setResult(local)
     try {
-      const res = await fetch('/api/pulso/run/finish', {
+      const res = await fetchWithTimeout('/api/humo/run/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        timeoutMs: FETCH_BUDGET_MS,
+        body: JSON.stringify({
+          token: tokenRef.current,
+          strokes: strokesRef.current,
+          alias: identityRef.current.alias,
+          tag: identityRef.current.tag,
+        }),
       })
       if (res.ok) {
         const data = (await res.json()) as {
           score: number
           hectares?: number
-          comboMax: number
           efficiency?: number
+          comboMax?: number
           arrived?: number
+          medal?: string
           rank: number
           total: number
           gap: number
           today: BoardEntry[]
         }
-        const ha = data.hectares ?? data.score
+        cacheBoard(data.today ?? [])
         setResult({
-          hectares: ha,
-          efficiency: data.efficiency ?? data.comboMax,
+          hectares: data.hectares ?? data.score,
+          efficiency: data.efficiency ?? data.comboMax ?? localSim.efficiency,
           arrived: data.arrived ?? arrived,
           rank: data.rank,
           total: data.total,
           gap: data.gap,
           today: data.today ?? [],
           personalBest: prevBest,
-          plays: loadPlays(),
+          medal: data.medal ?? localSim.medal,
         })
-        return
       }
     } catch {
       try {
         localStorage.setItem(
-          'pulso:pending',
-          JSON.stringify({ ...payload, score: localSim.hectares, at: Date.now() }),
+          'humo:pending',
+          JSON.stringify({ token: tokenRef.current, strokes: strokesRef.current, at: Date.now() }),
         )
       } catch {
-        /* private mode */
+        /* private */
       }
     }
   }, [])
 
   const commitStroke = useCallback((stroke: Stroke) => {
     const world = worldRef.current
-    const layout = layoutRef.current
     if (!world) return
-    if (strokesRef.current.some((s) => s.incident === stroke.incident)) return
-    strokesRef.current = [...strokesRef.current, stroke]
-    drawingRef.current = null
-    demoDrawRef.current = null
-    ghostRef.current = []
-    runnerRef.current = { points: stroke.points, born: performance.now() }
     const inc = world.incidents[stroke.incident]
     if (!inc) return
-    const resolved = resolveIncident(world, inc, stroke)
-    const focus = {
-      x: layout.ox + ((inc.focus.c + 0.5) / world.cols) * layout.gridW,
-      y: layout.oy + ((inc.focus.r + 0.5) / world.rows) * layout.gridH,
-    }
-    if (resolved.arrived && resolved.saved > 0) {
-      rachaRef.current += 1
-      playHumoSave(resolved.saved)
-      const big = resolved.saved >= 22 || resolved.efficiency >= 0.9
-      pushJuice(big ? humoCopy.juice.SAVE_BIG : humoCopy.juice.SAVE, '#7DDC68', big ? 1.35 : 1.12)
-      if (rachaRef.current === 2) pushJuice(humoCopy.juice.STREAK2, '#F2A021', 1.2)
-      if (rachaRef.current === 3) pushJuice(humoCopy.juice.STREAK3, '#C4B5FD', 1.45)
-      if (strokeOnRoad(world, stroke)) pushJuice(humoCopy.juice.ROAD, '#C4B5FD', 0.9)
-      try {
-        navigator.vibrate?.(big ? 36 : 22)
-      } catch {
-        /* desktop */
-      }
-      const now = performance.now()
-      const simNow = simulateRun(seedRef.current, strokesRef.current)
-      for (const cell of resolved.cells) {
-        const delay = (Math.abs(cell.c - world.node.c) + Math.abs(cell.r - world.node.r)) * 22
-        savedRef.current.push({ ...cell, born: now, delay })
-      }
-      particlesRef.current.push(...spawnBurst(focus.x, focus.y, '#C4B5FD', 28, 1.8))
-      particlesRef.current.push(...spawnBurst(focus.x, focus.y, '#7DDC68', 18, 1.1))
-      particlesRef.current.push(...spawnBurst(focus.x, focus.y, '#FFFFFF', 8, 0.55))
-      shocksRef.current.push({ x: focus.x, y: focus.y, born: now, color: big ? '#7DDC68' : '#C4B5FD' })
-      floatersRef.current.push({
-        text: humoCopy.plusHa(resolved.saved),
-        x: focus.x,
-        y: focus.y - 16,
-        born: now,
-        color: '#7DDC68',
-      })
-      shakeRef.current = big ? 16 : 10
-      flashRef.current = big ? 0.48 : 0.36
-      flashTintRef.current = 'save'
-      setHud((prev) => ({
-        ...prev,
-        hectares: simNow.hectares,
-        efficiency: simNow.efficiency,
-        ghost: 0,
-        racha: rachaRef.current,
-      }))
-    } else if (resolved.arrived) {
-      rachaRef.current = 0
-      playPulsoSfx('casi')
-      pushJuice(humoCopy.juice.ARRIVE, '#F2A021', 1.1)
-      shakeRef.current = 6
-      flashRef.current = 0.18
-      flashTintRef.current = 'fire'
-      particlesRef.current.push(...spawnBurst(focus.x, focus.y, '#F2A021', 12, 0.9))
-      shocksRef.current.push({ x: focus.x, y: focus.y, born: performance.now(), color: '#F2A021' })
+    if (strokesRef.current.some((row) => row.incident === stroke.incident)) return
+    drawingRef.current = null
+    ghostRef.current = []
+    strokesRef.current = [...strokesRef.current, stroke]
+    const preview = resolveIncident(world, inc, stroke)
+    hectaresRef.current += preview.saved
+    const layout = layoutRef.current
+    const fx = layout.ox + ((inc.focus.c + 0.5) / world.cols) * layout.gridW
+    const fy = layout.oy + ((inc.focus.r + 0.5) / world.rows) * layout.gridH
+    if (preview.arrived && preview.saved > 0) {
+      playHumoSave(preview.saved)
+      pushJuice(preview.late ? humoCopy.juice.ARRIVE : humoCopy.juice.SAVE, preview.late ? '#FF9F1C' : '#19C37D', 1.05)
+      savedRef.current = [
+        ...savedRef.current,
+        ...preview.cells.map((cell, i) => ({ ...cell, born: performance.now(), delay: i * 18 })),
+      ]
+      floatersRef.current.push({ text: humoCopy.plusHa(preview.saved), x: fx, y: fy, born: performance.now(), color: '#19C37D' })
+      particlesRef.current.push(...spawnBurst(fx, fy, '#19C37D', 16, 0.9))
+      runnerRef.current = { points: stroke.points, born: performance.now() }
     } else {
-      rachaRef.current = 0
       playPulsoSfx('miss')
-      pushJuice(humoCopy.juice.MISS, '#E34B34', 1.15)
-      shakeRef.current = 11
-      flashRef.current = 0.28
-      flashTintRef.current = 'miss'
-      particlesRef.current.push(...spawnBurst(focus.x, focus.y, '#E34B34', 14, 1.1))
-      try {
-        navigator.vibrate?.(48)
-      } catch {
-        /* desktop */
-      }
+      pushJuice(humoCopy.juice.MISS, '#FF5A36', 1.1)
+      particlesRef.current.push(...spawnBurst(fx, fy, '#FF5A36', 12, 0.8))
     }
   }, [])
 
@@ -419,22 +345,35 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     lastRef.current = performance.now()
     resetFx()
     worldRef.current = createWorld(seedRef.current)
-    setHud({
-      hectares: 0,
-      efficiency: 0,
-      left: MATCH_MS,
-      foco: 0,
-      freeze: false,
-      ghost: 0,
-      window: 0,
-      racha: 0,
-      clutch: false,
-      windowMax: 1,
-      canAct: false,
-      saved: 0,
-    })
+    setHud({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint })
     setPhaseBoth('play')
   }, [])
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      if (phaseRef.current === 'ready') {
+        event.preventDefault()
+        beginPlay()
+        return
+      }
+      if (phaseRef.current !== 'play' || demo) return
+      const world = worldRef.current
+      if (!world) return
+      const inc = incidentAt(tRef.current, world)
+      if (!inc || strokesRef.current.some((s) => s.incident === inc.id)) return
+      event.preventDefault()
+      const path = inc.id === 0 ? firstGuidePath(world) : [world.node, inc.focus]
+      commitStroke({
+        incident: inc.id,
+        points: path.map(normOfCell),
+        t0: tRef.current,
+        t1: tRef.current,
+      })
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [beginPlay, commitStroke, demo])
 
   const eventToNorm = (event: { clientX: number; clientY: number }) => {
     const canvas = canvasRef.current
@@ -443,10 +382,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     const layout = layoutRef.current
     const x = (event.clientX - rect.left - layout.ox) / layout.gridW
     const y = (event.clientY - rect.top - layout.oy) / layout.gridH
-    return {
-      x: Math.max(0, Math.min(1, x)),
-      y: Math.max(0, Math.min(1, y)),
-    }
+    return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) }
   }
 
   const cancelDraw = () => {
@@ -454,7 +390,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     ghostRef.current = []
     movedRef.current = false
     downPtRef.current = null
-    setGrabbing(false)
+    etaRef.current = null
   }
 
   const finishDraw = useCallback(() => {
@@ -464,55 +400,45 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     const world = worldRef.current
     const inc = world?.incidents[drawing.incident]
     const last = drawing.points[drawing.points.length - 1]
-    if (!movedRef.current || drawing.points.length < 4 || !inc || !last || !world) {
+    if (!movedRef.current || drawing.points.length < 2 || !inc || !last || !world) {
       cancelDraw()
-      pushJuice(humoCopy.coach, '#F2A021', 0.95)
       return
     }
-    if (!nearFocus(last, inc, world)) {
+    const end = snapEnd(world, inc, last)
+    if (!end.ok) {
       cancelDraw()
-      pushJuice(humoCopy.cancelHint, '#F2A021', 0.95)
+      pushJuice(humoCopy.coach, '#FF9F1C', 0.95)
       return
     }
-    drawing.points.push(normOfCell(inc.focus))
-    movedRef.current = false
-    downPtRef.current = null
-    setGrabbing(false)
+    drawing.points.push(end.snapped)
     commitStroke(drawing)
   }, [commitStroke])
 
   const onPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
     event.preventDefault()
-    void unlockPulsoAudio()
     if (event.pointerType === 'mouse' && event.button !== 0) return
     if (phaseRef.current === 'ready') beginPlay()
     if (phaseRef.current !== 'play' || demo) return
-    if (tRef.current >= FREEZE_MS) return
     const world = worldRef.current
-    if (!world) return
+    if (!world || isTelegraph(tRef.current)) return
     const inc = incidentAt(tRef.current, world)
-    if (!inc) {
-      pushJuice(humoCopy.coachWait, '#F2A021', 0.95)
-      return
-    }
+    if (!inc) return
     if (strokesRef.current.some((s) => s.incident === inc.id)) return
-    if (drawingRef.current) return
     const pt = eventToNorm(event)
     if (!pt) return
+    const start = snapStart(world, pt)
+    if (!start.ok) {
+      pushJuice(humoCopy.coach, '#19C37D', 0.9)
+      return
+    }
     try {
       event.currentTarget.setPointerCapture(event.pointerId)
     } catch {
-      /* jsdom / overlay */
+      /* overlay */
     }
     movedRef.current = false
     downPtRef.current = pt
-    drawingRef.current = {
-      incident: inc.id,
-      points: [normOfCell(inc.node), pt],
-      t0: tRef.current,
-      t1: tRef.current,
-    }
-    setGrabbing(true)
+    drawingRef.current = { incident: inc.id, points: [start.snapped, pt], t0: tRef.current, t1: tRef.current }
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -524,38 +450,18 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     if (origin) {
       const ox = pt.x - origin.x
       const oy = pt.y - origin.y
-      if (ox * ox + oy * oy > 0.0012) movedRef.current = true
+      if (ox * ox + oy * oy > 0.0008) movedRef.current = true
     }
     const last = drawing.points[drawing.points.length - 1]
     if (last) {
-      const dx = pt.x - last.x
-      const dy = pt.y - last.y
-      if (dx * dx + dy * dy < 0.00016) return
+      const nx = last.x + (pt.x - last.x) * 0.55
+      const ny = last.y + (pt.y - last.y) * 0.55
+      if ((nx - last.x) ** 2 + (ny - last.y) ** 2 < 0.00012) return
+      if (drawing.points.length >= 96) return
+      drawing.points.push({ x: nx, y: ny })
     }
-    if (drawing.points.length >= 96) return
-    drawing.points.push(pt)
     drawing.t1 = tRef.current
     playHumoWhoosh()
-    const layout = layoutRef.current
-    particlesRef.current.push({
-      x: layout.ox + pt.x * layout.gridW,
-      y: layout.oy + pt.y * layout.gridH,
-      vx: 0,
-      vy: -0.35,
-      life: 0.7,
-      color: onRoadRef.current ? '#C4B5FD' : '#F2A021',
-      size: 2.2,
-    })
-  }
-
-  const onPointerUp = () => {
-    finishDraw()
-  }
-
-  const onPointerCancel = () => {
-    if (!drawingRef.current) return
-    cancelDraw()
-    pushJuice(humoCopy.cancelHint, '#F2A021', 0.9)
   }
 
   useEffect(() => {
@@ -563,9 +469,8 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    let raf = 0
     let alive = true
-
+    let raf = 0
     const loop = (now: number) => {
       if (!alive) return
       const w = canvas.clientWidth
@@ -578,8 +483,9 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       layoutRef.current = gridLayout(w, h)
       let clutch = false
+      const world = worldRef.current
 
-      if (phaseRef.current === 'play' && worldRef.current) {
+      if (phaseRef.current === 'play' && world) {
         if (!lastRef.current) lastRef.current = now
         accRef.current += now - lastRef.current
         lastRef.current = now
@@ -588,147 +494,94 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
           tRef.current += TICK_MS
         }
         const t = tRef.current
-        const world = worldRef.current
         const inc = incidentAt(t, world)
-        clutch = Boolean(inc && inc.commitMs - t < 3200 && inc.commitMs - t > 0)
+        clutch = Boolean(inc && inc.id === FOCO_N - 1)
 
         if (inc && !announcedRef.current.has(inc.id)) {
           announcedRef.current.add(inc.id)
           playPulsoSfx('doble')
-          shakeRef.current = 7
-          flashRef.current = 0.26
-          flashTintRef.current = 'fire'
           const layout = layoutRef.current
           const fx = layout.ox + ((inc.focus.c + 0.5) / world.cols) * layout.gridW
           const fy = layout.oy + ((inc.focus.r + 0.5) / world.rows) * layout.gridH
-          particlesRef.current.push(...spawnBurst(fx, fy, '#FF6A1A', 22, 1.45))
-          shocksRef.current.push({ x: fx, y: fy, born: now, color: '#FF6A1A' })
-          try {
-            navigator.vibrate?.(12)
-          } catch {
-            /* desktop */
-          }
+          particlesRef.current.push(...spawnBurst(fx, fy, '#FF5A36', 18, 1.2))
         }
-
         if (inc && clutch && !clutchRef.current.has(inc.id) && !strokesRef.current.some((s) => s.incident === inc.id)) {
           clutchRef.current.add(inc.id)
           playHumoClutch()
-          pushJuice(humoCopy.juice.CLUTCH, '#E34B34', 1.1)
+          pushJuice(humoCopy.juice.CLUTCH, '#FF5A36', 1.1)
         }
-
         for (const row of world.incidents) {
           if (t >= row.commitMs && !strokesRef.current.some((s) => s.incident === row.id) && !missedRef.current.has(row.id)) {
             missedRef.current.add(row.id)
             if (drawingRef.current?.incident === row.id) drawingRef.current = null
-            ghostRef.current = []
-            rachaRef.current = 0
             playPulsoSfx('brecha')
-            pushJuice(humoCopy.juice.FIRE, '#E34B34', 1.22)
-            shakeRef.current = 12
-            flashRef.current = 0.3
-            flashTintRef.current = 'miss'
+            pushJuice(humoCopy.juice.MISS, '#FF5A36', 1.15)
           }
         }
-
         const drawing = drawingRef.current
-        if (drawing && inc && now - lastPreviewRef.current > 50) {
+        if (drawing && inc && now - lastPreviewRef.current > 40) {
           lastPreviewRef.current = now
           drawing.t1 = t
-          onRoadRef.current = strokeOnRoad(world, drawing)
-          const preview = resolveIncident(world, inc, drawing)
+          const preview = resolveIncident(world, inc, { ...drawing, points: [...drawing.points, normOfCell(inc.focus)] })
           ghostRef.current = preview.cells
+          etaRef.current = previewEta(world, inc, drawing.points, t)
           setHud((prev) => ({ ...prev, ghost: preview.saved }))
-        } else if (!drawing && ghostRef.current.length) {
+        } else if (!drawing) {
           ghostRef.current = []
+          etaRef.current = null
         }
-
+        if (!reducedRef.current && now % 3 < 1.5) {
+          particlesRef.current.push(...spawnWind(layoutRef.current, world, now))
+        }
         if (demo && inc && !strokesRef.current.some((s) => s.incident === inc.id)) {
-          if (!demoDrawRef.current || demoDrawRef.current.id !== inc.id) {
-            const path = astar(world, inc.node, inc.focus) ?? [inc.node, inc.focus]
-            demoDrawRef.current = { id: inc.id, points: path.map(normOfCell), born: t }
-          }
-          const demoDraw = demoDrawRef.current
-          if (demoDraw) {
-            const u = Math.min(1, (t - demoDraw.born) / 780)
-            const n = Math.max(2, Math.floor(u * demoDraw.points.length))
-            drawingRef.current = {
-              incident: inc.id,
-              points: demoDraw.points.slice(0, n),
-              t0: demoDraw.born,
-              t1: t,
-            }
-            if (u >= 1) {
-              commitStroke({
-                incident: inc.id,
-                points: demoDraw.points,
-                t0: demoDraw.born,
-                t1: t,
-              })
-            }
-          }
+          const path = (astar(world, inc.node, inc.focus) ?? []).map(normOfCell)
+          const born = inc.appearMs + 80
+          const u = Math.min(1, (t - born) / 900)
+          const n = Math.max(2, Math.floor(u * path.length))
+          drawingRef.current = { incident: inc.id, points: path.slice(0, n), t0: born, t1: t }
+          if (u >= 1) commitStroke({ incident: inc.id, points: path, t0: born, t1: t })
         }
-
-        if (t >= FREEZE_MS && drawingRef.current) {
-          commitStroke({ ...drawingRef.current, t1: FREEZE_MS })
-        }
-        if (t >= FREEZE_MS && !missedRef.current.has(99)) {
-          missedRef.current.add(99)
-          playPulsoSfx('rush')
-          pushJuice(humoCopy.juice.CUT, '#C4B5FD', 1.2)
-        }
-
         if (t >= MATCH_MS && phaseRef.current === 'play') {
           if (demo) {
-            window.setTimeout(() => {
-              void startRun()
-            }, 1100)
+            window.setTimeout(() => void startRun(), 900)
             setPhaseBoth('boot')
           } else {
             setPhaseBoth('end')
             void finish()
           }
         }
-
         if (now - lastHudRef.current > 80) {
           lastHudRef.current = now
-          setHud((prev) => ({
-            hectares: prev.hectares,
-            efficiency: prev.efficiency,
+          const canAct = Boolean(inc && !isTelegraph(t) && !strokesRef.current.some((s) => s.incident === inc.id))
+          setHud({
             left: Math.max(0, MATCH_MS - t),
-            foco: inc ? inc.id + 1 : t >= FREEZE_MS ? FOCO_N : 0,
-            freeze: t >= FREEZE_MS,
-            ghost: drawingRef.current ? prev.ghost : 0,
-            window: inc ? Math.max(0, inc.commitMs - t) : 0,
-            windowMax: inc ? Math.max(1, inc.commitMs - inc.appearMs) : 1,
-            racha: rachaRef.current,
+            ha: hectaresRef.current,
+            ghost: drawingRef.current ? hud.ghost : 0,
+            canAct,
             clutch,
-            canAct: Boolean(
-              inc && t < FREEZE_MS && !strokesRef.current.some((s) => s.incident === inc.id),
-            ),
-            saved: strokesRef.current.length,
-          }))
+            line: isTelegraph(t)
+              ? 'El predio se calienta'
+              : isGuiding(t)
+                ? 'Del verde al naranja'
+                : clutch
+                  ? 'Último foco'
+                  : 'Base → fuego',
+          })
         }
       } else {
         lastRef.current = now
       }
 
-      particlesRef.current = stepParticles(particlesRef.current)
-      if (particlesRef.current.length > 200) particlesRef.current = particlesRef.current.slice(-200)
-      shakeRef.current *= 0.82
-      flashRef.current *= 0.86
-      juiceRef.current = juiceRef.current.filter((j) => now - j.born < 1400)
+      particlesRef.current = stepParticles(particlesRef.current).slice(-180)
+      juiceRef.current = juiceRef.current.filter((j) => now - j.born < 900)
       floatersRef.current = floatersRef.current.filter((f) => now - f.born < 1100)
-      shocksRef.current = shocksRef.current.filter((s) => now - s.born < 560)
 
       const liveWorld = worldRef.current
       const liveInc = liveWorld ? incidentAt(tRef.current, liveWorld) : null
-      const canAct = Boolean(
-        liveInc && tRef.current < FREEZE_MS && !strokesRef.current.some((s) => s.incident === liveInc.id),
-      )
-      const tutorial = Boolean(canAct && liveInc && liveInc.id === 0 && !drawingRef.current)
+      const canAct = Boolean(liveInc && !isTelegraph(tRef.current) && !strokesRef.current.some((s) => s.incident === liveInc.id))
       const guide =
-        tutorial && liveWorld && liveInc
-          ? (astar(liveWorld, liveInc.node, liveInc.focus) ?? []).map(normOfCell)
+        liveWorld && liveInc && isGuiding(tRef.current) && !drawingRef.current
+          ? firstGuidePath(liveWorld).map(normOfCell)
           : []
 
       drawFrame(ctx, w, h, {
@@ -745,161 +598,84 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
         floaters: floatersRef.current,
         shocks: shocksRef.current,
         layout: layoutRef.current,
-        shake: shakeRef.current,
-        flash: flashRef.current,
-        flashTint: flashTintRef.current,
-        onRoad: onRoadRef.current,
+        shake: 0,
+        flash: 0,
+        flashTint: 'fire' as FlashTint,
+        onRoad: true,
         clutch,
-        hint: tutorial,
+        hint: canAct && Boolean(liveInc && liveInc.id === 0),
         canAct,
         guide,
         runner: runnerRef.current,
+        eta: etaRef.current,
+        reduced: reducedRef.current,
       })
-
-      raf = requestAnimationFrame(loop)
+      raf = window.requestAnimationFrame(loop)
     }
-    raf = requestAnimationFrame(loop)
+    raf = window.requestAnimationFrame(loop)
     return () => {
       alive = false
-      cancelAnimationFrame(raf)
+      window.cancelAnimationFrame(raf)
     }
-  }, [commitStroke, demo, finish, startRun])
-
-  useEffect(() => {
-    if (!demo || phase !== 'ready') return
-    const id = window.setTimeout(() => beginPlay(), 1400)
-    return () => window.clearTimeout(id)
-  }, [beginPlay, demo, phase])
+  }, [commitStroke, demo, finish, hud.ghost, startRun])
 
   useDemoRematch(demo, phase, () => {
+    bumpRematch()
     void startRun()
   })
 
-  useEffect(() => {
-    const onUp = () => finishDraw()
-    const onCancel = () => {
-      if (!drawingRef.current) return
-      drawingRef.current = null
-      ghostRef.current = []
-      movedRef.current = false
-      downPtRef.current = null
-      setGrabbing(false)
-    }
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onCancel)
-    return () => {
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onCancel)
-    }
-  }, [finishDraw])
+  const rematch = () => {
+    bumpRematch()
+    void startRun()
+  }
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Enter' && event.key !== ' ') return
-      const target = event.target as HTMLElement | null
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
-      event.preventDefault()
-      void unlockPulsoAudio()
-      if (phaseRef.current === 'ready') beginPlay()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [beginPlay])
+  const seconds = Math.ceil(hud.left / 1000)
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative flex h-full flex-col bg-[#0D1210]">
+      <header className="pointer-events-none absolute inset-x-0 top-[max(0.4rem,env(safe-area-inset-top))] z-20 flex items-start justify-between px-4">
+        <div className="rounded-2xl bg-[#0D1210]/70 px-3 py-2 text-[#F4E7CF] backdrop-blur-sm">
+          <p className="font-display text-4xl leading-none tabular-nums">{seconds}</p>
+          <p className="text-sm text-[#C99052]">{hud.ha} ha</p>
+        </div>
+        <button
+          type="button"
+          className="pointer-events-auto min-h-12 min-w-12 rounded-full border border-[#C99052]/40 bg-[#0D1210]/80 px-3 text-sm text-[#F4E7CF]"
+          onClick={() => setPulsoMuted(!muted)}
+        >
+          {muted ? humoCopy.mute : humoCopy.sound}
+        </button>
+      </header>
+
       <canvas
         ref={canvasRef}
-        role="application"
-        aria-label="Arrastrá del nodo verde al fuego naranja"
-        className={`block h-full w-full touch-none ${grabbing ? 'cursor-grabbing' : 'cursor-crosshair'}`}
+        className="h-[72vh] w-full touch-none md:h-[min(78vh,900px)]"
+        style={{ touchAction: 'none' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerCancel}
-        onContextMenu={(event) => event.preventDefault()}
+        onPointerUp={finishDraw}
+        onPointerCancel={cancelDraw}
+        aria-label="Predio. Arrastrá desde la base verde hasta el fuego."
       />
-      {phase === 'ready' ? (
-        <ArcadeReady
-          kicker="ANTES DEL HUMO"
-          title={humoCopy.hint}
-          body="Arrastrá del nodo verde al fuego. Salvás hectáreas."
-          cue={humoCopy.draw}
-          accent="#16B57D"
-          toBeat={toBeat}
-          onStart={beginPlay}
-        />
-      ) : null}
 
-      {phase === 'play' ? (
-        <ArcadeHud
-          score={hud.hectares}
-          unit={humoCopy.ha}
-          timeMs={hud.left}
-          accent="#16B57D"
-          clutch={hud.clutch}
-          left={
-            <>
-              {hud.ghost > 0 ? (
-                <p className="text-sm font-black text-[#7DDC68]">{humoCopy.ghostHa(hud.ghost)}</p>
-              ) : null}
-              {hud.racha > 1 ? (
-                <p className="text-sm font-black text-[#C4B5FD]">
-                  {humoCopy.racha}
-                  {hud.racha}
-                </p>
-              ) : null}
-            </>
-          }
-          right={
-            <>
-              <p className="mt-1 text-[11px] text-[#16B57D]">
-                {hud.saved}/{FOCO_N}
-              </p>
-              {hud.freeze ? <p className="font-black tracking-wide text-[#C4B5FD]">{humoCopy.juice.CUT}</p> : null}
-            </>
-          }
-        />
-      ) : null}
+      <p className="pointer-events-none absolute bottom-[max(5.5rem,env(safe-area-inset-bottom))] left-0 right-0 text-center text-lg text-[#F4E7CF]">
+        {phase === 'play' ? hud.line : phase === 'ready' ? humoCopy.hint : phase === 'boot' ? 'Cargando predio' : ''}
+        {offline && phase !== 'end' ? ` · ${humoCopy.offline}` : ''}
+      </p>
 
-      {phase === 'play' && hud.window > 0 && !hud.freeze ? (
-        <div className="pointer-events-none absolute inset-x-8 top-[4.6rem] h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div
-            className={`h-full ${hud.clutch ? 'bg-[#E34B34]' : 'bg-[#F2A021]'}`}
-            style={{ width: `${Math.min(100, (hud.window / hud.windowMax) * 100)}%` }}
-          />
+      {phase === 'ready' && (
+        <div className="absolute inset-x-0 bottom-[max(1.2rem,env(safe-area-inset-bottom))] z-20 flex justify-center px-4">
+          <button
+            type="button"
+            onClick={beginPlay}
+            className="min-h-14 w-full max-w-sm rounded-full bg-[#19C37D] px-6 font-display text-2xl tracking-wide text-[#0D1210]"
+          >
+            {humoCopy.cta}
+          </button>
         </div>
-      ) : null}
-
-      {phase === 'play' && !hud.freeze && !grabbing ? (
-        <div className="pointer-events-none absolute inset-x-4 bottom-16 z-10 text-center">
-          {hud.canAct && hud.foco === 1 ? (
-            <p className="text-sm font-black tracking-wide text-[#F2A021]">{humoCopy.coach}</p>
-          ) : hud.canAct && hud.foco === 3 ? (
-            <p className="text-xs font-black tracking-wide text-[#E34B34]">Último</p>
-          ) : hud.canAct && hud.foco === 2 ? (
-            <p className="text-xs font-semibold text-white/60">{humoCopy.coachDrag}</p>
-          ) : hud.foco === 0 ? (
-            <p className="text-sm font-semibold text-white/70">{humoCopy.coachWait}</p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {demo ? null : (
-      <button
-        type="button"
-        className="absolute bottom-4 right-4 z-10 min-h-11 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] uppercase tracking-wide"
-        onClick={(event) => {
-          event.stopPropagation()
-          setPulsoMuted(!muted)
-          void unlockPulsoAudio()
-        }}
-      >
-        {muted ? humoCopy.mute : humoCopy.sound}
-      </button>
       )}
 
-      {phase === 'end' && result ? (
+      {phase === 'end' && result && (
         <HumoEndScreen
           hectares={result.hectares}
           efficiency={result.efficiency}
@@ -909,16 +685,14 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
           gap={result.gap}
           today={result.today}
           personalBest={result.personalBest}
-          plays={result.plays}
-          toBeat={toBeat}
-          mission={mission}
+          medal={result.medal}
           seed={seedRef.current}
-          initialAlias={identity.alias}
-          initialTag={identity.tag}
-          runToken={demo ? null : runToken}
-          onRematch={() => void startRun()}
+          initialAlias={identityRef.current.alias}
+          runToken={runToken}
+          toBeat={toBeat}
+          onRematch={rematch}
         />
-      ) : null}
+      )}
     </div>
   )
 }

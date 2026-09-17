@@ -1,23 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { getWhatsAppHref } from '@/lib/brand/contact'
 import { logPlaytest } from '@/lib/arcade/session-log'
+import { fetchWithTimeout } from '@/lib/arcade/fetch-timeout'
 import { humoCopy } from '@/lib/humo/copy'
-import { encodeShareSeed, FOCO_N } from '@/lib/humo/sim'
-import {
-  anotherAlias,
-  humoStars,
-  humoTitle,
-  saveIdentity,
-  type HumoMission,
-} from '@/lib/pulso/camba'
-import {
-  PULSO_WHATSAPP_PRESET,
-  humoChallengeUrl,
-  humoChallengeWhatsAppHref,
-} from '@/lib/pulso/social'
+import { FOCO_N, encodeShareSeed } from '@/lib/humo/sim'
+import { saveIdentity } from '@/lib/pulso/camba'
+import { humoChallengeUrl, humoChallengeWhatsAppHref } from '@/lib/pulso/social'
 import type { BoardEntry } from '@/lib/pulso/types'
 
 type Props = {
@@ -29,207 +19,129 @@ type Props = {
   gap: number
   today: BoardEntry[]
   personalBest: number
-  plays: number
-  toBeat: number
-  mission: HumoMission | null
+  medal: string
   seed: number
   initialAlias: string
-  initialTag: string
   runToken: string | null
+  toBeat: number
   onRematch: () => void
 }
 
 export function HumoEndScreen({
   hectares,
-  efficiency,
   arrived,
   rank,
   total,
   gap,
   today,
   personalBest,
-  plays,
-  toBeat,
+  medal,
   seed,
   initialAlias,
-  initialTag,
   runToken,
+  toBeat,
   onRematch,
 }: Props) {
   const [alias, setAlias] = useState(initialAlias)
-  const [tag, setTag] = useState(initialTag)
-  const [published, setPublished] = useState(true)
-  const prize = useMemo(() => humoTitle(hectares, efficiency, arrived), [arrived, efficiency, hectares])
-  const stars = humoStars(hectares, efficiency, arrived)
-  const isRecord = hectares > personalBest
-  const beatLead = toBeat > 0 && hectares >= toBeat
   const shareUrl = humoChallengeUrl(encodeShareSeed(seed))
-  const shareText = humoCopy.shareText(hectares, prize.title, shareUrl, rank)
+  const shareText = humoCopy.shareText(hectares, medal, shareUrl, rank)
   const waHref = humoChallengeWhatsAppHref(shareText)
-  const [pop, setPop] = useState(false)
+  const isRecord = hectares > personalBest
+  const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    const id = window.setTimeout(() => setPop(true), 30)
     logPlaytest('HUMO', hectares, !runToken)
-    return () => window.clearTimeout(id)
   }, [hectares, runToken])
 
   const share = useCallback(async () => {
     if (navigator.share) {
       try {
         await navigator.share({ title: humoCopy.title, text: shareText, url: shareUrl })
+        return
       } catch {
         /* cancel */
       }
-      return
     }
     window.location.href = waHref
   }, [shareText, shareUrl, waHref])
 
   const publish = useCallback(async () => {
-    saveIdentity(alias, tag)
+    saveIdentity(alias, 'SCZ')
     if (!runToken) {
-      setPublished(true)
+      setSaved(true)
       return
     }
     try {
-      await fetch('/api/pulso/run/finish', {
+      await fetchWithTimeout('/api/humo/run/finish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: runToken, alias, tag, aliasOnly: true }),
+        body: JSON.stringify({ token: runToken, alias, aliasOnly: true }),
       })
     } catch {
       /* offline */
     }
-    setPublished(true)
-  }, [alias, runToken, tag])
-
-  const icp = useCallback(async () => {
-    try {
-      await fetch('/api/pulso/interest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source: 'icp-whatsapp' }),
-      })
-    } catch {
-      /* */
-    }
-    window.location.href = getWhatsAppHref(PULSO_WHATSAPP_PRESET)
-  }, [])
-
-  const rankLabel = rank != null ? `${rank}${total ? humoCopy.ofToday(total) : ''}` : '—'
+    setSaved(true)
+  }, [alias, runToken])
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#0A0A0F]/95 px-4 py-5 [touch-action:pan-y]">
-      <p className="text-center text-[11px] font-semibold tracking-[0.28em] text-[#16B57D]">{humoCopy.title}</p>
-      <p className="mt-2 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#F2A021]">{prize.title}</p>
-      <p className="mt-1 text-center text-lg tracking-[0.2em] text-[#F2A021]">
-        {'★'.repeat(stars)}
-        {'☆'.repeat(3 - stars)}
+    <div className="absolute inset-0 z-30 flex flex-col overflow-y-auto bg-[#0D1210]/94 px-4 py-6 [touch-action:pan-y]">
+      <p className="text-center text-sm tracking-[0.28em] text-[#19C37D]">{humoCopy.kicker}</p>
+      <h2 className="font-display mt-2 text-center text-4xl text-[#F4E7CF]">{medal}</h2>
+      <p className="font-display mt-3 text-center text-7xl tabular-nums text-[#FF9F1C]">{hectares}</p>
+      <p className="text-center text-lg text-[#F4E7CF]">{humoCopy.ha}</p>
+      <p className="mt-1 text-center text-sm text-[#C99052]">
+        {arrived}/{FOCO_N} rutas · {rank != null ? `${rank}° de ${total || 'hoy'}` : 'ranking local'}
+        {rank === 1 ? ` · ${humoCopy.gapLead}` : rank && rank > 1 ? ` · ${humoCopy.gap(gap)}` : ''}
       </p>
-      <p
-        className={`mt-2 text-center text-7xl font-black tabular-nums text-[#F2A021] transition-transform duration-500 ${
-          pop ? 'scale-100' : 'scale-75'
-        }`}
-      >
-        {hectares}
-      </p>
-      <p className="mt-1 text-center text-sm text-[#D9DCE1]">
-        {humoCopy.ha} · {efficiency}% · {arrived}/{FOCO_N}
-      </p>
-      <p className="mt-2 text-center text-sm">
-        {humoCopy.rankToday} <span className="font-semibold">{rankLabel}</span>
-        {rank == null ? '' : rank === 1 ? ` · ${humoCopy.gapLead}` : ` · ${humoCopy.gap(gap)}`}
-      </p>
-      <p className="mt-1 text-center text-xs text-[#16B57D]">
+      <p className="mt-1 text-center text-sm text-[#19C37D]">
         {isRecord ? humoCopy.newRecord : humoCopy.yourBest(Math.max(personalBest, hectares))}
-        {beatLead ? ` · ${humoCopy.beatLead}` : ''}
+        {toBeat > 0 && hectares >= toBeat ? ' · Le ganaste al 1°' : ''}
       </p>
 
+      <div className="mx-auto mt-5 flex w-full max-w-sm flex-col gap-2">
+        <button
+          type="button"
+          onClick={onRematch}
+          className="min-h-14 rounded-full bg-[#FF9F1C] font-display text-2xl text-[#0D1210]"
+        >
+          {humoCopy.rematch}
+        </button>
+        <button
+          type="button"
+          onClick={() => void share()}
+          className="min-h-12 rounded-full border border-[#19C37D] font-display text-xl text-[#19C37D]"
+        >
+          {humoCopy.share}
+        </button>
+      </div>
+
       {today.length > 0 ? (
-        <ol className="mx-auto mt-4 w-full max-w-sm space-y-1.5 text-sm">
+        <ol className="mx-auto mt-4 w-full max-w-sm space-y-1.5">
           {today.slice(0, 5).map((row, i) => (
-            <li key={row.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5">
-              <span className="text-[#70757F]">{i + 1}</span>
-              <span className="flex-1 px-2 font-medium">
-                {row.alias} <span className="text-[10px] text-[#16B57D]">{row.tag}</span>
-              </span>
-              <span className="tabular-nums text-[#F2A021]">{row.score} ha</span>
+            <li key={row.id} className="flex min-h-12 items-center justify-between rounded-xl bg-[#253C29] px-3">
+              <span className="w-6 text-[#C99052]">{i + 1}</span>
+              <span className="flex-1 text-[#F4E7CF]">{row.alias}</span>
+              <span className="tabular-nums text-[#FF9F1C]">{row.score} ha</span>
             </li>
           ))}
         </ol>
       ) : null}
 
-      <form
-        className="mx-auto mt-4 flex w-full max-w-sm flex-col gap-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          void publish()
-        }}
-      >
-        <div className="flex gap-2">
-          <input
-            id="humo-alias"
-            aria-label={humoCopy.aliasLabel}
-            maxLength={12}
-            value={alias}
-            onChange={(e) => {
-              setAlias(e.target.value)
-              setPublished(false)
-            }}
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-[#16B57D]"
-          />
-          <input
-            aria-label="Sigla"
-            maxLength={3}
-            value={tag}
-            onChange={(e) => {
-              setTag(e.target.value.toUpperCase())
-              setPublished(false)
-            }}
-            className="w-16 rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-center text-sm outline-none focus:border-[#16B57D]"
-          />
-        </div>
-        <button
-          type="button"
-          className="text-[11px] text-[#16B57D] underline-offset-2 hover:underline"
-          onClick={() => {
-            setAlias(anotherAlias(alias, String(plays), today.map((row) => row.alias)))
-            setPublished(false)
-          }}
-        >
-          {humoCopy.otherAlias}
-        </button>
-        {!published ? (
-          <button type="submit" className="rounded-lg bg-[#16B57D] py-2.5 text-sm font-semibold text-[#0A0A0F]">
-            {humoCopy.saveAlias}
-          </button>
-        ) : null}
-      </form>
-
-      <div className="mx-auto mt-4 flex w-full max-w-sm flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => void share()}
-          className="rounded-lg bg-[#25D366] py-3 text-sm font-bold text-[#0A0A0F]"
-        >
-          {humoCopy.share}
-        </button>
-        <button
-          type="button"
-          onClick={onRematch}
-          className="rounded-lg bg-[#F2A021] py-3 text-sm font-bold text-[#0A0A0F]"
-        >
-          {humoCopy.rematch}
-        </button>
-      </div>
-
+      <label className="mx-auto mt-4 flex w-full max-w-sm flex-col gap-2 text-sm text-[#F4E7CF]">
+        {humoCopy.aliasLabel}
+        <input
+          maxLength={12}
+          value={alias}
+          onChange={(e) => setAlias(e.target.value)}
+          className="min-h-12 rounded-xl border border-[#3E5A32] bg-[#253C29] px-3 text-[#F4E7CF]"
+        />
+      </label>
       <button
         type="button"
-        onClick={() => void icp()}
-        className="mx-auto mt-3 mb-3 text-xs font-semibold text-[#16B57D]"
+        onClick={() => void publish()}
+        className="mx-auto mt-2 min-h-12 w-full max-w-sm rounded-xl border border-[#19C37D] text-[#19C37D]"
       >
-        {humoCopy.icpCta}
+        {saved ? 'En el ranking' : humoCopy.saveAlias}
       </button>
     </div>
   )

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Tanque y agua">
+  <rect width="256" height="256" fill="#0D1210"/>
+  <ellipse cx="128" cy="150" rx="88" ry="48" fill="#24505C"/>
+  <circle cx="128" cy="96" r="36" fill="#6AA0AA"/>
+  <rect x="116" y="96" width="24" height="54" fill="#3E5A32"/>
+</svg>

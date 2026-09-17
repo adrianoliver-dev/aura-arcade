@@ -1,24 +1,24 @@
 # Aura Arcade
 
-Juegos de stand para Fexpocruz. **Repo aparte de Aura** (`Aura-MVP-V2-Front`) para no romper producción.
+Stand Fexpocruz. **Repo aparte de Aura** para no romper producción.
+
+Producto público: **AURA: ANTES DEL HUMO — Ruta de escape**. Una ronda de 40 segundos. Un pulgar. Ranking de hoy.
+
+PULSO queda como attract de 10–15 s en `/loop`. RADIO / MURO / SALIDA viven en `/lab` (no indexados).
 
 Cuenta: [adrianoliver-dev](https://github.com/adrianoliver-dev).
 
-## Juegos (90s, un pulgar, ranking hoy)
+| Superficie | Ruta | Rol |
+|---|---|---|
+| Landing | `/` | CTA único `JUGÁ 40 S` |
+| Hero | `/jugar` | Antes del Humo |
+| QR | `/qr` | Afiche de stand |
+| TV | `/loop` | Attract PULSO → hero |
+| Lab | `/lab` | Prototipos post-evento |
 
-| # | Juego | Ruta | Fantasía |
-|---|---|---|---|
-| 1 | PULSO | `/anillos` | Anillos. Tocá al ritmo. |
-| 2 | ANTES DEL HUMO | `/humo` | Trazá la ruta. Salvás hectáreas. |
-| 3 | RADIO ROJA | `/radio` | Jefe de brigada. Agua / corte / evacuá. |
-| 4 | MURO | `/muro` | Pintá el cortafuego. La casa no puede caer. |
-| 5 | SALIDA | `/salida` | Tres sendas. Evitá el fuego. Sacá a la gente. |
+Es una metáfora jugable. No afirma minutos de anticipación, hectáreas reales ni eficacia operacional de Aura.
 
-Sala: `/` · Loop TV Fexpo: `/loop`
-
-## Local (Diego / Micael)
-
-Repo público. Los juegos están jugables y **abiertos a mejorar** (feel, balance, juice). No toquen el front de Aura.
+## Local
 
 ```bash
 git clone https://github.com/adrianoliver-dev/aura-arcade.git
@@ -27,13 +27,15 @@ pnpm install
 pnpm dev
 ```
 
-Abrí [http://127.0.0.1:3020](http://127.0.0.1:3020). Loop TV: `/loop`. Tests: `pnpm test`.
+Abrí [http://127.0.0.1:3020](http://127.0.0.1:3020). Tests: `pnpm test`. Build: `pnpm build`.
 
-Ranking en dev: archivo `.data/arcade.json`. En prod: `PULSO_KV_URL` + `PULSO_KV_TOKEN` (Upstash) y `PULSO_RUN_SECRET`.
+Ranking en dev: `.data/arcade.json`. Prod: `PULSO_KV_URL` + `PULSO_KV_TOKEN` y `PULSO_RUN_SECRET`.
+
+Fuente de verdad de duración, seed del día, score y anti-cheat: `lib/humo/sim.ts`.
 
 ## Trailers
 
-No hay video IA. El loop del stand es `/loop` (gameplay en vivo). Pack CapCut en `capcut/` para cortar tomas reales (35–45s, mute-proof).
+Gameplay real de la build final. No hay video IA como sustituto. Ver `docs/video/` y `docs/ARCADE-RECOVERY-BRIEF.md`.
 
 ## Licencia
 

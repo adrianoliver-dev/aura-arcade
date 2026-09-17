@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Corral estilizado">
+  <rect width="256" height="256" fill="#0D1210"/>
+  <rect x="40" y="52" width="176" height="152" fill="none" stroke="#C99052" stroke-width="10"/>
+  <rect x="108" y="112" width="40" height="28" fill="#3A2A1C"/>
+  <circle cx="88" cy="168" r="10" fill="#8B5E34"/>
+  <circle cx="168" cy="164" r="10" fill="#8B5E34"/>
+</svg>
