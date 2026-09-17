@@ -7,3 +7,6 @@ node_modules
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
+.chrome-rec
+public/trailers/qa/
+public/trailers/qa2/

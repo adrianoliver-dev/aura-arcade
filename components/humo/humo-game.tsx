@@ -42,6 +42,8 @@ import {
   unlockPulsoAudio,
 } from '@/components/pulso/pulso-audio'
 
+import { ArcadeHud } from '@/components/arcade/arcade-hud'
+import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { saveGameBest } from '@/lib/arcade/liga'
 import { addXp, xpFromScore } from '@/lib/arcade/progress'
 import { HumoEndScreen } from './humo-end-screen'
@@ -799,8 +801,6 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [beginPlay])
 
-  const secs = Math.ceil(hud.left / 1000)
-
   return (
     <div className="relative h-full w-full">
       <canvas
@@ -815,46 +815,46 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
         onContextMenu={(event) => event.preventDefault()}
       />
       {phase === 'ready' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-[8%] px-4 text-center">
-          <p className="text-xl font-black tracking-wide sm:text-2xl">{humoCopy.hint}</p>
-          {toBeat > 0 ? (
-            <p className="mt-2 text-[11px] text-white/50">{humoCopy.toBeat(toBeat)}</p>
-          ) : null}
-          <p className="mt-4 animate-pulse text-xs uppercase tracking-[0.2em] text-[#F2A021]">{humoCopy.draw}</p>
-        </div>
+        <ArcadeReady
+          kicker="ANTES DEL HUMO"
+          title={humoCopy.hint}
+          body="Arrastrá del nodo verde al fuego. Salvás hectáreas."
+          cue={humoCopy.draw}
+          accent="#16B57D"
+          toBeat={toBeat}
+          interactive={false}
+        />
       ) : null}
 
       {phase === 'play' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-3 flex items-start justify-between px-4 text-sm">
-          <div>
-            <p
-              className={`text-3xl font-black tabular-nums leading-none transition-transform duration-150 ${
-                hud.ghost > 0 ? 'scale-110 text-[#7DDC68]' : ''
-              }`}
-            >
-              {hud.hectares}
-              <span className="ml-1 text-sm font-semibold text-[#F2A021]">{humoCopy.ha}</span>
-            </p>
-            {hud.ghost > 0 ? (
-              <p className="animate-pulse text-sm font-black text-[#7DDC68]">{humoCopy.ghostHa(hud.ghost)}</p>
-            ) : null}
-            {hud.racha > 1 ? (
-              <p className="text-sm font-black text-[#C4B5FD]">
-                {humoCopy.racha}
-                {hud.racha}
+        <ArcadeHud
+          score={hud.hectares}
+          unit={humoCopy.ha}
+          timeMs={hud.left}
+          accent="#16B57D"
+          clutch={hud.clutch}
+          left={
+            <>
+              {hud.ghost > 0 ? (
+                <p className="text-sm font-black text-[#7DDC68]">{humoCopy.ghostHa(hud.ghost)}</p>
+              ) : null}
+              {hud.racha > 1 ? (
+                <p className="text-sm font-black text-[#C4B5FD]">
+                  {humoCopy.racha}
+                  {hud.racha}
+                </p>
+              ) : null}
+            </>
+          }
+          right={
+            <>
+              <p className="mt-1 text-[11px] text-[#16B57D]">
+                {hud.saved}/{FOCO_N}
               </p>
-            ) : null}
-          </div>
-          <div className="text-right">
-            <p className={`text-3xl font-black tabular-nums leading-none ${hud.clutch ? 'text-[#E34B34]' : hud.freeze ? 'text-[#C4B5FD]' : ''}`}>
-              {secs}s
-            </p>
-            <p className="mt-1 text-[11px] text-[#16B57D]">{hud.saved}/{FOCO_N}</p>
-            {hud.freeze ? (
-              <p className="font-black tracking-wide text-[#C4B5FD]">{humoCopy.juice.CUT}</p>
-            ) : null}
-          </div>
-        </div>
+              {hud.freeze ? <p className="font-black tracking-wide text-[#C4B5FD]">{humoCopy.juice.CUT}</p> : null}
+            </>
+          }
+        />
       ) : null}
 
       {phase === 'play' && hud.window > 0 && !hud.freeze ? (
@@ -880,9 +880,10 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
         </div>
       ) : null}
 
+      {demo ? null : (
       <button
         type="button"
-        className="absolute bottom-4 right-4 z-10 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] uppercase tracking-wide"
+        className="absolute bottom-4 right-4 z-10 min-h-11 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] uppercase tracking-wide"
         onClick={(event) => {
           event.stopPropagation()
           setPulsoMuted(!muted)
@@ -891,6 +892,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
       >
         {muted ? humoCopy.mute : humoCopy.sound}
       </button>
+      )}
 
       {phase === 'end' && result ? (
         <HumoEndScreen

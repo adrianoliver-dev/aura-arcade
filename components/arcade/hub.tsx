@@ -28,7 +28,7 @@ export function ArcadeHub() {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,#16B57D22,transparent_55%)]" />
       <p className="relative font-[family-name:var(--hud-font)] text-[11px] tracking-[0.42em] text-[#16B57D]">AURA ARCADE</p>
       <h1 className="relative mt-2 text-center text-4xl font-black tracking-tight">Fexpocruz 2026</h1>
-      <p className="relative mt-2 max-w-sm text-center text-sm text-white/60">
+      <p className="relative mt-2 max-w-sm text-center text-base leading-snug text-white/70">
         Cinco juegos. Un pulgar. Ranking de hoy. El calor sube entre rondas.
       </p>
 
@@ -71,6 +71,9 @@ export function ArcadeHub() {
                   <p className="mt-1 text-sm text-white/70">{game.blurb}</p>
                   <p className="mt-2 text-[11px]" style={{ color: game.accent }}>
                     Misión: {mission.label}
+                  </p>
+                  <p className="mt-3 min-h-11 text-sm font-black tracking-[0.14em]" style={{ color: game.accent }}>
+                    JUGÁ
                   </p>
                 </div>
               </Link>

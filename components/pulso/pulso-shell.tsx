@@ -1,12 +1,8 @@
 'use client'
 
-import { useEffect, useSyncExternalStore, type ReactNode } from 'react'
-
-const emptySubscribe = () => () => {}
+import { useEffect, type ReactNode } from 'react'
 
 export function PulsoShell({ children }: { children: ReactNode }) {
-  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
-
   useEffect(() => {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -21,8 +17,8 @@ export function PulsoShell({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <div className="pulso-shell relative h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0A0A0F] text-white antialiased [touch-action:none] [user-select:none]">
-      {mounted ? children : null}
+    <div className="pulso-shell relative h-[100dvh] w-full overflow-hidden overscroll-none bg-[#0A0A0F] text-white antialiased [touch-action:manipulation] [user-select:none]">
+      {children}
     </div>
   )
 }

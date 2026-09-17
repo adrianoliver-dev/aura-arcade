@@ -372,10 +372,15 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
               </>
             }
             right={
-              <p className="mt-1 font-[family-name:var(--hud-font)] text-sm tracking-[0.18em] text-white/80">
-                {'⌂'.repeat(hud.houses)}
-                {'·'.repeat(Math.max(0, 3 - hud.houses))}
-              </p>
+              <div className="mt-1 flex justify-end gap-1" aria-label={`${hud.houses} casas`}>
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="inline-block h-3 w-3 rounded-sm"
+                    style={{ background: i < hud.houses ? '#F2A021' : 'rgba(255,255,255,0.18)' }}
+                  />
+                ))}
+              </div>
             }
           />
 

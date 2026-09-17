@@ -447,17 +447,19 @@ export function PulsoGame({ demo = false }: Props) {
         />
       ) : null}
 
-      <button
-        type="button"
-        className="absolute bottom-4 right-4 z-10 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] uppercase tracking-wide"
-        onClick={(event) => {
-          event.stopPropagation()
-          setPulsoMuted(!muted)
-          void unlockPulsoAudio()
-        }}
-      >
-        {muted ? pulsoCopy.mute : pulsoCopy.sound}
-      </button>
+      {demo ? null : (
+        <button
+          type="button"
+          className="absolute bottom-4 right-4 z-10 min-h-11 rounded-full border border-white/20 bg-black/40 px-3 py-1.5 text-[11px] uppercase tracking-wide"
+          onClick={(event) => {
+            event.stopPropagation()
+            setPulsoMuted(!muted)
+            void unlockPulsoAudio()
+          }}
+        >
+          {muted ? pulsoCopy.mute : pulsoCopy.sound}
+        </button>
+      )}
 
       {phase === 'end' && result ? (
         <PulsoEndScreen

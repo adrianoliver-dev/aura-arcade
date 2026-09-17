@@ -124,25 +124,35 @@ export function ArcadeEnd({
           void publish()
         }}
       >
+        <label className="sr-only" htmlFor="arcade-alias">
+          Apodo
+        </label>
         <input
+          id="arcade-alias"
           maxLength={12}
           value={alias}
           aria-label="Apodo"
+          placeholder="Apodo"
           onChange={(e) => {
             setAlias(e.target.value)
             setPublished(false)
           }}
-          className="min-h-[44px] min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 text-sm outline-none"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-3 text-sm outline-none focus:border-[#16B57D]"
         />
+        <label className="sr-only" htmlFor="arcade-tag">
+          Tag
+        </label>
         <input
+          id="arcade-tag"
           maxLength={3}
           value={tag}
           aria-label="Tag"
+          placeholder="SC"
           onChange={(e) => {
             setTag(e.target.value.toUpperCase())
             setPublished(false)
           }}
-          className="h-[44px] w-16 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-sm"
+          className="h-11 w-16 rounded-lg border border-white/10 bg-white/5 px-2 text-center text-sm focus:border-[#16B57D]"
         />
       </form>
       <button
