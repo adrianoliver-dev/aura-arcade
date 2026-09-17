@@ -7,7 +7,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Aura Arcade · Fexpocruz',
-  description: 'Juegos de stand Aura. Repo aparte de producción.',
+  description: 'Cinco juegos Aura. 90 segundos. Ranking de hoy.',
 }
 
 export const viewport: Viewport = {

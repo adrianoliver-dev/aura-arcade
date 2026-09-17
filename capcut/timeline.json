@@ -1,0 +1,19 @@
+{
+  "fps": 60,
+  "width": 1920,
+  "height": 1080,
+  "durationSec": 62,
+  "tracks": {
+    "V1": "assembly gameplay dry — 12s per game",
+    "V2": [
+      { "file": "titles/16x9/01-pulso.png", "in": 0, "out": 7 },
+      { "file": "titles/16x9/02-humo.png", "in": 12, "out": 19 },
+      { "file": "titles/16x9/03-radio.png", "in": 24, "out": 31 },
+      { "file": "titles/16x9/04-muro.png", "in": 36, "out": 43 },
+      { "file": "titles/16x9/05-salida.png", "in": 48, "out": 55 },
+      { "file": "titles/16x9/06-endcard.png", "in": 58, "out": 62 }
+    ],
+    "A1": "music bed, duck -8dB under VO",
+    "A2": "vo lines from CAPCUT_EDIT.md"
+  }
+}

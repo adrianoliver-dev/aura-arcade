@@ -1,12 +1,14 @@
 export type GameStatus = 'live' | 'soon'
 
 export type ArcadeGame = {
-  id: string
+  id: 'anillos' | 'humo' | 'radio' | 'muro' | 'salida'
   href: string
   title: string
   blurb: string
+  promise: string
   status: GameStatus
   n: number
+  accent: string
 }
 
 export const ARCADE_GAMES: ArcadeGame[] = [
@@ -16,7 +18,9 @@ export const ARCADE_GAMES: ArcadeGame[] = [
     n: 1,
     title: 'PULSO',
     blurb: 'Anillos. Tocá al ritmo.',
+    promise: 'El anillo cierra. Tocá ahora.',
     status: 'live',
+    accent: '#F2A021',
   },
   {
     id: 'humo',
@@ -24,30 +28,38 @@ export const ARCADE_GAMES: ArcadeGame[] = [
     n: 2,
     title: 'ANTES DEL HUMO',
     blurb: 'Ruta al fuego. Salvás hectáreas.',
+    promise: 'Trazá el camino. El fuego no espera.',
     status: 'live',
+    accent: '#16B57D',
   },
   {
-    id: 'slot-3',
-    href: '#',
+    id: 'radio',
+    href: '/radio',
     n: 3,
-    title: 'PRÓXIMO',
-    blurb: 'Slot libre para el 3.',
-    status: 'soon',
+    title: 'RADIO ROJA',
+    blurb: 'El predio llama. Tres botones. Cero tiempo.',
+    promise: 'Agua, corte o evacuá. Ya.',
+    status: 'live',
+    accent: '#E34B34',
   },
   {
-    id: 'slot-4',
-    href: '#',
+    id: 'muro',
+    href: '/muro',
     n: 4,
-    title: 'PRÓXIMO',
-    blurb: 'Slot libre para el 4.',
-    status: 'soon',
+    title: 'MURO',
+    blurb: 'Pintá el cortafuego. La casa no puede caer.',
+    promise: 'El fuego camina. Encerralo.',
+    status: 'live',
+    accent: '#C4B5FD',
   },
   {
-    id: 'slot-5',
-    href: '#',
+    id: 'salida',
+    href: '/salida',
     n: 5,
-    title: 'PRÓXIMO',
-    blurb: 'Slot libre para el 5.',
-    status: 'soon',
+    title: 'SALIDA',
+    blurb: 'Tres sendas. Evitá el fuego. Sacá a la gente.',
+    promise: 'Cambiá de carril. No pares.',
+    status: 'live',
+    accent: '#7DDC68',
   },
 ]
