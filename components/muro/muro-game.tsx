@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { ArcadeBoot } from '@/components/arcade/arcade-boot'
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
 import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
@@ -28,7 +29,7 @@ import type { BoardEntry } from '@/lib/pulso/types'
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 type Spark = { x: number; y: number; vx: number; vy: number; life: number; color: string }
 
-export function MuroGame() {
+export function MuroGame({ demo = false }: { demo?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tRef = useRef(0)
   const seedRef = useRef(1)
@@ -65,6 +66,15 @@ export function MuroGame() {
     clutchPlayed.current = false
     const id = loadIdentity(String(seedRef.current))
     setIdentity(id)
+    if (demo) {
+      seedRef.current = (Date.now() ^ 0x22) >>> 0 || 1
+      tokenRef.current = null
+      liveRef.current = createMuroLive(seedRef.current)
+      lastSpread.current = 0
+      setHud({ left: MATCH_MS, walls: 0, stock: 8, houseUp: true, threat: 12 })
+      setPhase('ready')
+      return
+    }
     try {
       const res = await fetch('/api/muro/run/start', { method: 'POST' })
       if (!res.ok) throw new Error('start')
@@ -81,7 +91,7 @@ export function MuroGame() {
     lastSpread.current = 0
     setHud({ left: MATCH_MS, walls: 0, stock: 8, houseUp: true, threat: 12 })
     setPhase('ready')
-  }, [])
+  }, [demo])
 
   useEffect(() => {
     void startRun()
@@ -187,6 +197,17 @@ export function MuroGame() {
         if (!lastRef.current) lastRef.current = now
         tRef.current = Math.min(MATCH_MS, tRef.current + (now - lastRef.current))
         lastRef.current = now
+        if (demo) {
+          const want = Math.min(8, Math.floor(tRef.current / 380))
+          while (wallsRef.current.length < want) {
+            const i = wallsRef.current.length
+            const c = 2 + i
+            const r = 7
+            if (wallsRef.current.length >= stockAt(tRef.current)) break
+            if (liveRef.current.fire.has(keyOf(c, r))) break
+            wallsRef.current.push({ c, r, t: tRef.current })
+          }
+        }
         while (tRef.current - lastSpread.current >= SPREAD_MS && !endedRef.current) {
           lastSpread.current += SPREAD_MS
           const before = liveRef.current.burned
@@ -271,7 +292,19 @@ export function MuroGame() {
       alive = false
       cancelAnimationFrame(raf)
     }
-  }, [finish, phase])
+  }, [demo, finish, phase])
+
+  useEffect(() => {
+    if (!demo || phase !== 'ready') return
+    const id = window.setTimeout(() => {
+      void unlockPulsoAudio()
+      tRef.current = 0
+      lastRef.current = performance.now()
+      lastSpread.current = 0
+      setPhase('play')
+    }, 800)
+    return () => window.clearTimeout(id)
+  }, [demo, phase])
 
   return (
     <div className="relative h-full w-full">
@@ -302,6 +335,7 @@ export function MuroGame() {
           painting.current = false
         }}
       />
+      {phase === 'boot' ? <ArcadeBoot label="Midiendo el lote" /> : null}
       {phase === 'ready' ? (
         <ArcadeReady
           kicker="MURO"

@@ -44,6 +44,8 @@ import {
   unlockPulsoAudio,
 } from './pulso-audio'
 import { PulsoEndScreen } from './pulso-end-screen'
+import { ArcadeHud } from '@/components/arcade/arcade-hud'
+import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { saveGameBest } from '@/lib/arcade/liga'
 import { addXp, xpFromScore } from '@/lib/arcade/progress'
 
@@ -395,8 +397,6 @@ export function PulsoGame({ demo = false }: Props) {
     return () => window.clearTimeout(id)
   }, [beginPlay, demo, phase])
 
-  const secs = Math.ceil(hud.left / 1000)
-
   return (
     <div className="relative h-full w-full">
       <canvas
@@ -408,51 +408,43 @@ export function PulsoGame({ demo = false }: Props) {
         }}
       />
       {phase === 'ready' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-[8%] px-4 text-center">
-          <p className="text-[11px] font-semibold tracking-[0.32em] text-[#16B57D]">{pulsoCopy.title}</p>
-          <p className="mt-2 text-[11px] text-[#F2A021]">
-            {identity.alias} · {pulsoCopy.predio}
-          </p>
-          <p className="mt-3 text-xl font-black tracking-wide sm:text-2xl">{pulsoCopy.hint}</p>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-[#D9DCE1]">{pulsoCopy.ghost}</p>
-          {mission ? (
-            <p className="mx-auto mt-3 max-w-xs rounded-full border border-[#F2A021]/40 bg-[#F2A021]/10 px-3 py-1 text-[11px] text-[#F2A021]">
-              {pulsoCopy.mission}: {mission.label}
-            </p>
-          ) : null}
-          {toBeat > 0 ? (
-            <p className="mt-2 text-[11px] text-white/50">{pulsoCopy.toBeat(toBeat)}</p>
-          ) : null}
-          <p className="mt-6 text-xs uppercase tracking-[0.2em] text-[#F2A021]">{pulsoCopy.tap}</p>
-        </div>
+        <ArcadeReady
+          kicker={pulsoCopy.title}
+          title={pulsoCopy.hint}
+          body={pulsoCopy.ghost}
+          cue={pulsoCopy.tap}
+          accent="#F2A021"
+          mission={mission ? `${pulsoCopy.mission}: ${mission.label}` : undefined}
+          toBeat={toBeat}
+          interactive={false}
+        />
       ) : null}
 
       {phase === 'play' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-3 flex items-start justify-between px-4 text-sm">
-          <div>
-            <p className="text-[10px] tracking-[0.25em] text-[#16B57D]">{pulsoCopy.title}</p>
-            <p className="text-[11px] text-white/60">{identity.alias}</p>
-            <p className="text-2xl font-black tabular-nums">{hud.score}</p>
-            <p className="text-[11px] text-[#F2A021]">
-              {pulsoCopy.focos} {hud.kills}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className={`text-2xl font-black tabular-nums ${hud.rush ? 'text-[#E34B34]' : ''}`}>{secs}s</p>
-            <p className="text-[11px] text-[#16B57D]">{hud.wave}</p>
-            {hud.combo > 0 ? (
-              <p className="text-[#F2A021]">
-                {pulsoCopy.combo} ×{comboMultiplier(hud.combo).toFixed(1)}
+        <ArcadeHud
+          score={hud.score}
+          timeMs={hud.left}
+          accent="#F2A021"
+          clutch={hud.rush}
+          left={
+            <>
+              <p className="text-[11px] text-[#F2A021]">
+                {pulsoCopy.focos} {hud.kills}
               </p>
-            ) : null}
-            {hud.rush ? (
-              <p className="max-w-[9rem] font-black tracking-wide text-[#E34B34]">{pulsoCopy.rush}</p>
-            ) : null}
-            {toBeat > 0 ? (
-              <p className="text-[10px] text-white/45">{pulsoCopy.toBeat(toBeat)}</p>
-            ) : null}
-          </div>
-        </div>
+              {hud.combo > 0 ? (
+                <p className="text-[#F2A021]">
+                  {pulsoCopy.combo} ×{comboMultiplier(hud.combo).toFixed(1)}
+                </p>
+              ) : null}
+            </>
+          }
+          right={
+            <>
+              <p className="mt-1 text-[11px] text-[#16B57D]">{hud.wave}</p>
+              {hud.rush ? <p className="font-black tracking-wide text-[#E34B34]">{pulsoCopy.rush}</p> : null}
+            </>
+          }
+        />
       ) : null}
 
       <button

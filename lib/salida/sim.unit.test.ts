@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { MATCH_MS, applyEvent, buildTrack, emptyScore, parseMarks, simulateRun } from './sim'
+import { MATCH_MS, applyEvent, buildTrack, emptyScore, parseMarks, perfectMarks, simulateRun } from './sim'
 
 describe('SALIDA sim', () => {
   it('misma pista con el mismo seed', () => {
@@ -24,6 +24,12 @@ describe('SALIDA sim', () => {
     assert.equal(kind, 'save')
     assert.equal(s.rescued, 1)
     assert.ok(s.score > 0)
+  })
+
+  it('perfectMarks golpea menos que quedarse en el medio', () => {
+    const tank = simulateRun(12, [{ t: 0, lane: 1 }])
+    const pro = simulateRun(12, perfectMarks(12))
+    assert.ok(pro.hits <= tank.hits)
   })
 
   it('applyEvent resta fuerte al golpe y parsea marcas', () => {

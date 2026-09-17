@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { ArcadeBoot } from '@/components/arcade/arcade-boot'
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
 import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
@@ -34,7 +35,7 @@ const ACTIONS: { id: Action; label: string; hint: string; color: string }[] = [
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
-export function RadioGame() {
+export function RadioGame({ demo = false }: { demo?: boolean }) {
   const tRef = useRef(0)
   const seedRef = useRef(1)
   const tokenRef = useRef<string | null>(null)
@@ -45,6 +46,7 @@ export function RadioGame() {
   const lastRef = useRef(0)
   const endedRef = useRef(false)
   const ammoRef = useRef(emptyAmmo())
+  const autoRef = useRef(new Set<number>())
   const [phase, setPhase] = useState<Phase>('boot')
   const [identity, setIdentity] = useState({ alias: '', tag: 'SCZ' })
   const [hud, setHud] = useState({
@@ -77,11 +79,21 @@ export function RadioGame() {
     tRef.current = 0
     doneRef.current = new Set()
     clutchRef.current = new Set()
+    autoRef.current = new Set()
     decisionsRef.current = []
     endedRef.current = false
     ammoRef.current = emptyAmmo()
     const id = loadIdentity(String(seedRef.current))
     setIdentity(id)
+    if (demo) {
+      seedRef.current = (Date.now() ^ 0x51d4e5) >>> 0 || 1
+      tokenRef.current = null
+      callsRef.current = buildCalls(seedRef.current)
+      setIdentity(loadIdentity(String(seedRef.current)))
+      setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false, ammo: emptyAmmo() })
+      setPhase('ready')
+      return
+    }
     try {
       const boardRes = await fetch('/api/radio/leaderboard', { cache: 'no-store' })
       if (boardRes.ok) {
@@ -107,7 +119,7 @@ export function RadioGame() {
     }
     setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false, ammo: emptyAmmo() })
     setPhase('ready')
-  }, [])
+  }, [demo])
 
   useEffect(() => {
     void startRun()
@@ -265,6 +277,10 @@ export function RadioGame() {
         call,
         clutch: Boolean(call && call.commitMs - t < 1800),
       }))
+      if (demo && call && !autoRef.current.has(call.id) && t > call.appearMs + 420) {
+        autoRef.current.add(call.id)
+        pick(call.correct)
+      }
       setShake((s) => s * 0.82)
       if (t >= MATCH_MS) {
         setPhase('end')
@@ -275,7 +291,18 @@ export function RadioGame() {
     }
     raf = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(raf)
-  }, [finish, phase])
+  }, [demo, finish, phase, pick])
+
+  useEffect(() => {
+    if (!demo || phase !== 'ready') return
+    const id = window.setTimeout(() => {
+      void unlockPulsoAudio()
+      tRef.current = 0
+      lastRef.current = performance.now()
+      setPhase('play')
+    }, 900)
+    return () => window.clearTimeout(id)
+  }, [demo, phase])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -307,6 +334,7 @@ export function RadioGame() {
         background: hud.clutch ? '#1a0808' : '#0A0A0F',
       }}
     >
+      {phase === 'boot' ? <ArcadeBoot label="Sintonizando radio" /> : null}
       {flash ? (
         <div
           className="pointer-events-none absolute inset-0 z-10"

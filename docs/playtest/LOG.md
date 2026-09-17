@@ -14,3 +14,5 @@ Hallazgos cortos:
 - Badge Arcade ya no tapa el HUD (pasó a la izquierda).
 - Hub con Calor/XP visible.
 - `/qr` apunta al repo hasta tener URL de stand (`NEXT_PUBLIC_ARCADE_URL`).
+- `/reel` = loop de gameplay real (demo) + QR. HUMO y MURO se vieron bien en mesa.
+- Battery 40 seeds: flood MURO no sella el mapa; tank SALIDA nunca es “Sacó al pueblo”; spam RADIO no empata al mixto.

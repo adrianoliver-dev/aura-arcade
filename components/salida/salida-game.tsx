@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { ArcadeBoot } from '@/components/arcade/arcade-boot'
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
 import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
@@ -24,7 +25,7 @@ import {
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
-export function SalidaGame() {
+export function SalidaGame({ demo = false }: { demo?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const tRef = useRef(0)
   const seedRef = useRef(1)
@@ -64,6 +65,14 @@ export function SalidaGame() {
     shakeRef.current = 0
     const id = loadIdentity(String(seedRef.current))
     setIdentity(id)
+    if (demo) {
+      seedRef.current = (Date.now() ^ 0x33) >>> 0 || 1
+      tokenRef.current = null
+      trackRef.current = buildTrack(seedRef.current)
+      setHud({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1, hits: 0 })
+      setPhase('ready')
+      return
+    }
     try {
       const res = await fetch('/api/salida/run/start', { method: 'POST' })
       if (!res.ok) throw new Error('start')
@@ -79,7 +88,7 @@ export function SalidaGame() {
     trackRef.current = buildTrack(seedRef.current)
     setHud({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1, hits: 0 })
     setPhase('ready')
-  }, [])
+  }, [demo])
 
   useEffect(() => {
     void startRun()
@@ -176,6 +185,18 @@ export function SalidaGame() {
         tRef.current = Math.min(MATCH_MS, tRef.current + (now - lastRef.current))
         lastRef.current = now
         const t = tRef.current
+        if (demo) {
+          const next = trackRef.current.find((ev) => ev.t > t && ev.t < t + 720)
+          if (next) {
+            let want = laneRef.current
+            if (next.kind === 'gente') want = next.lane
+            else if (next.lane === laneRef.current) want = next.lane === 1 ? 0 : 1
+            if (want !== laneRef.current) {
+              laneRef.current = want
+              marksRef.current.push({ t, lane: want })
+            }
+          }
+        }
         trackRef.current.forEach((ev, i) => {
           if (hitRef.current.has(i) || t < ev.t) return
           hitRef.current.add(i)
@@ -261,7 +282,18 @@ export function SalidaGame() {
       alive = false
       cancelAnimationFrame(raf)
     }
-  }, [finish, phase])
+  }, [demo, finish, phase])
+
+  useEffect(() => {
+    if (!demo || phase !== 'ready') return
+    const id = window.setTimeout(() => {
+      void unlockPulsoAudio()
+      tRef.current = 0
+      lastRef.current = performance.now()
+      setPhase('play')
+    }, 800)
+    return () => window.clearTimeout(id)
+  }, [demo, phase])
 
   return (
     <div className="relative h-full w-full">
@@ -281,6 +313,7 @@ export function SalidaGame() {
           setLane(Math.floor((x / rect.width) * 3))
         }}
       />
+      {phase === 'boot' ? <ArcadeBoot label="Abriendo sendas" /> : null}
       {phase === 'ready' ? (
         <ArcadeReady
           kicker="SALIDA"

@@ -19,8 +19,8 @@ Material en `public/trailers/` y `docs/playtest/` cuando existan los MP4.
 
 ## Grabar
 
-1. `pnpm dev` → http://localhost:3020
-2. Grabar hub + una ronda de cada juego (Win+G o OpenScreen).
-3. Recortar highlights.
+1. `pnpm dev` → http://localhost:3020/reel (gameplay real, 5 juegos + QR)
+2. Grabar 68s (Win+G o `ffmpeg -f gdigrab -framerate 30 -t 68 -i desktop public/trailers/loop-raw.mp4`).
+3. Recortar highlights para 2 shorts 9:16.
 4. MoneyPrinterTurbo / CapCut para títulos mute-proof.
-5. QR last frame: `http://localhost:3020/qr` o `NEXT_PUBLIC_ARCADE_URL`.
+5. QR last frame: ya está en el reel.

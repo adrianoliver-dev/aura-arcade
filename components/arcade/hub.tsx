@@ -44,10 +44,10 @@ export function ArcadeHub() {
       </div>
 
       <Link
-        href="/loop"
+        href="/reel"
         className="relative mt-4 inline-flex min-h-[44px] items-center rounded-full border border-[#F2A021]/40 bg-[#F2A021]/10 px-5 text-[11px] font-semibold tracking-[0.18em] text-[#F2A021]"
       >
-        LOOP TV · TRAILERS
+        LOOP TV · GAMEPLAY
       </Link>
 
       <ol className="relative mt-6 grid w-full max-w-md gap-3">

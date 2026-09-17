@@ -2,7 +2,7 @@
 
 Filmá el juego real. No reconstruyas HUD en After Effects. No uses video IA.
 
-Stand TV: poné [http://127.0.0.1:3020/loop](http://127.0.0.1:3020/loop) en bucle (silenciado + títulos). Eso ya es el atractivo.
+Stand TV: poné [http://127.0.0.1:3020/reel](http://127.0.0.1:3020/reel) en bucle. Eso es **gameplay real** de los 5 juegos + QR, no el canvas de /loop.
 
 Este pack es para Shorts / reel de 45s / pantalla si preferís mp4.
 

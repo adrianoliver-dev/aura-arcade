@@ -96,6 +96,27 @@ export function applyEvent(ev: LaneEvent, lane: number, state: LiveScore): 'save
   return 'dodge'
 }
 
+export function perfectMarks(seed: number): LaneMark[] {
+  const track = buildTrack(seed)
+  const marks: LaneMark[] = [{ t: 0, lane: 1 }]
+  let lane = 1
+  for (const ev of track) {
+    const window = track.filter((e) => Math.abs(e.t - ev.t) < 50)
+    const hazards = new Set(window.filter((e) => e.kind !== 'gente').map((e) => e.lane))
+    const people = window.find((e) => e.kind === 'gente')
+    let want = lane
+    if (people && !hazards.has(people.lane)) want = people.lane
+    else if (hazards.has(lane)) {
+      want = ([0, 1, 2] as const).find((l) => !hazards.has(l)) ?? lane
+    }
+    if (want !== lane) {
+      marks.push({ t: Math.max(0, ev.t - 140), lane: want })
+      lane = want
+    }
+  }
+  return marks
+}
+
 export function simulateRun(seed: number, marks: LaneMark[]): SalidaResult {
   const track = buildTrack(seed)
   const state = emptyScore()
