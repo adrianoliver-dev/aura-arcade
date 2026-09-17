@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 import { ARCADE_GAMES } from '@/lib/arcade/games'
@@ -43,12 +42,12 @@ export function ArcadeHub() {
         <p className="mt-2 text-[11px] text-white/45">Jugá otra ronda. El calor no se resetea a los 90s.</p>
       </div>
 
-      <Link
+      <a
         href="/reel"
-        className="relative mt-4 inline-flex min-h-[44px] items-center rounded-full border border-[#F2A021]/40 bg-[#F2A021]/10 px-5 text-[11px] font-semibold tracking-[0.18em] text-[#F2A021]"
+        className="relative mt-4 inline-flex min-h-11 items-center rounded-full border border-[#F2A021]/40 bg-[#F2A021]/10 px-5 text-[11px] font-semibold tracking-[0.18em] text-[#F2A021]"
       >
         LOOP TV · GAMEPLAY
-      </Link>
+      </a>
 
       <ol className="relative mt-6 grid w-full max-w-md gap-3">
         {ARCADE_GAMES.map((game) => {
@@ -56,7 +55,7 @@ export function ArcadeHub() {
           const mission = missionFor(game.id, heat)
           return (
             <li key={game.id}>
-              <Link href={game.href} className="block min-h-[44px]">
+              <a href={game.href} className="block min-h-11">
                 <div
                   className="rounded-2xl border px-4 py-4"
                   style={{ borderColor: `${game.accent}77`, background: `linear-gradient(180deg, ${game.accent}22, #0B0B10)` }}
@@ -76,7 +75,7 @@ export function ArcadeHub() {
                     JUGÁ
                   </p>
                 </div>
-              </Link>
+              </a>
             </li>
           )
         })}
