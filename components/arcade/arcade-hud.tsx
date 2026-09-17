@@ -13,7 +13,7 @@ type Props = {
 }
 
 export function ArcadeHud({ score, unit = 'pts', timeMs, accent, clutch, left, right }: Props) {
-  const secs = Math.max(0, Math.ceil(timeMs / 1000))
+  const secs = Math.max(0, Math.min(90, Math.ceil(timeMs / 1000)))
   const danger = clutch || secs <= 8
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-3 pt-[max(0.75rem,env(safe-area-inset-top))]">

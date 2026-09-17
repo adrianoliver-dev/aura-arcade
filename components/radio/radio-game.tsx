@@ -25,6 +25,7 @@ import {
 } from '@/lib/radio/sim'
 import { loadIdentity } from '@/lib/pulso/camba'
 import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
+import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import type { BoardEntry } from '@/lib/pulso/types'
 
 const ACTIONS: { id: Action; label: string; hint: string; color: string }[] = [
@@ -304,6 +305,10 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
     return () => window.clearTimeout(id)
   }, [demo, phase])
 
+  useDemoRematch(demo, phase, () => {
+    void startRun()
+  })
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Enter' && phase === 'ready') {
@@ -402,7 +407,17 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
             )}
           </div>
 
-          {hud.juice ? <p className="mt-3 text-center text-2xl font-black text-[#7DDC68]">{hud.juice}</p> : <div className="mt-3 h-8" />}
+          {hud.juice ? (
+            <p
+              className={`mt-3 text-center text-2xl font-black ${
+                hud.juice === '¡SÍ!' || hud.juice.startsWith('x') ? 'text-[#7DDC68]' : 'text-[#E34B34]'
+              }`}
+            >
+              {hud.juice}
+            </p>
+          ) : (
+            <div className="mt-3 h-8" />
+          )}
 
           <div className="mt-auto grid grid-cols-3 gap-2">
             {ACTIONS.map((a) => (

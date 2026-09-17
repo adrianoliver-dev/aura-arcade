@@ -26,3 +26,14 @@ Hallazgos cortos:
 - Fallo en el take: indicador N de Next.js (dev) aparece en el loop. Apagar `devIndicators` y regrabar en prod.
 - Overlay de títulos ya no cubre los botones de RADIO (pasó arriba del HUD).
 - Falta playtest de 30 min por juego (battery ≠ mesa).
+
+## Sesión 2026-09-17 16:22 mesa
+
+- Hub: `next/link` no navegaba; pasó a `<a href>`. PULSO abre.
+- PULSO: ready era `pointer-events: none` (no se podía tapear). Ahora el overlay arranca. Boot “Midiendo el predio”.
+- PULSO jugado ~45s: HUD 75s, juice ¡SE METIÓ!/¡DOBLE!, focos suben. Score 0 si hay muchas brechas (penalidad 250).
+- RADIO: boot “Sintonizando”, ready táctil, 3 botones 8/8/8. Sin tap se acaba en 0 pts / LÍNEA MUDA / 0 casas.
+- RADIO juice TARDE era verde; ahora rojo si falla.
+- HUMO: `IndexSizeError` radio negativo en landscape corto; `gridLayout` ya no da cell < 4.
+- Demo rematch a los 2.4s del end (20 rondas ≈ 30 min de mesa).
+- Regrabando `/reel` sin N de Next.

@@ -8,6 +8,7 @@ import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { playHumoClutch, playHumoWhoosh, playPulsoSfx, unlockPulsoAudio } from '@/components/pulso/pulso-audio'
 import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
+import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import {
   COLS,
   MATCH_MS,
@@ -306,6 +307,10 @@ export function MuroGame({ demo = false }: { demo?: boolean }) {
     return () => window.clearTimeout(id)
   }, [demo, phase])
 
+  useDemoRematch(demo, phase, () => {
+    void startRun()
+  })
+
   return (
     <div className="relative h-full w-full">
       <canvas
@@ -343,7 +348,13 @@ export function MuroGame({ demo = false }: { demo?: boolean }) {
           body="Pocos muros. Regeneran. Encerrá el fuego, no el mapa."
           cue="ARRASTRÁ"
           accent="#C4B5FD"
-          interactive={false}
+          onStart={() => {
+            void unlockPulsoAudio()
+            tRef.current = 0
+            lastRef.current = performance.now()
+            lastSpread.current = 0
+            setPhase('play')
+          }}
         />
       ) : null}
       {phase === 'play' ? (

@@ -8,6 +8,7 @@ import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { playHumoSave, playPulsoSfx, unlockPulsoAudio } from '@/components/pulso/pulso-audio'
 import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
+import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import { loadIdentity } from '@/lib/pulso/camba'
 import type { BoardEntry } from '@/lib/pulso/types'
 import {
@@ -295,6 +296,10 @@ export function SalidaGame({ demo = false }: { demo?: boolean }) {
     return () => window.clearTimeout(id)
   }, [demo, phase])
 
+  useDemoRematch(demo, phase, () => {
+    void startRun()
+  })
+
   return (
     <div className="relative h-full w-full">
       <canvas
@@ -321,7 +326,12 @@ export function SalidaGame({ demo = false }: { demo?: boolean }) {
           body="Tocá un carril. Evitá el fuego. Agarrá a la gente. Tankear no da título."
           cue="TOCÁ · ← →"
           accent="#7DDC68"
-          interactive={false}
+          onStart={() => {
+            void unlockPulsoAudio()
+            tRef.current = 0
+            lastRef.current = performance.now()
+            setPhase('play')
+          }}
         />
       ) : null}
       {phase === 'play' ? (

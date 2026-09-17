@@ -44,10 +44,12 @@ import {
   unlockPulsoAudio,
 } from './pulso-audio'
 import { PulsoEndScreen } from './pulso-end-screen'
+import { ArcadeBoot } from '@/components/arcade/arcade-boot'
 import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { saveGameBest } from '@/lib/arcade/liga'
 import { addXp, xpFromScore } from '@/lib/arcade/progress'
+import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
@@ -397,6 +399,10 @@ export function PulsoGame({ demo = false }: Props) {
     return () => window.clearTimeout(id)
   }, [beginPlay, demo, phase])
 
+  useDemoRematch(demo, phase, () => {
+    void startRun()
+  })
+
   return (
     <div className="relative h-full w-full">
       <canvas
@@ -407,6 +413,7 @@ export function PulsoGame({ demo = false }: Props) {
           onPulse()
         }}
       />
+      {phase === 'boot' ? <ArcadeBoot label="Midiendo el predio" /> : null}
       {phase === 'ready' ? (
         <ArcadeReady
           kicker={pulsoCopy.title}
@@ -416,7 +423,8 @@ export function PulsoGame({ demo = false }: Props) {
           accent="#F2A021"
           mission={mission ? `${pulsoCopy.mission}: ${mission.label}` : undefined}
           toBeat={toBeat}
-          interactive={false}
+          onStart={beginPlay}
+          interactive
         />
       ) : null}
 

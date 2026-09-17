@@ -99,17 +99,17 @@ export function hash01(n: number): number {
 }
 
 export function gridLayout(w: number, h: number): GridLayout {
-  const padTop = Math.max(72, Math.min(100, h * 0.1))
-  const padBot = Math.max(92, h * 0.12)
+  const padTop = Math.max(56, Math.min(100, h * 0.1))
+  const padBot = Math.max(72, Math.min(120, h * 0.12))
   const padX = Math.max(8, w * 0.02)
-  const availW = w - padX * 2
-  const availH = h - padTop - padBot
-  const cell = Math.min(availW / COLS, availH / ROWS)
+  const availW = Math.max(32, w - padX * 2)
+  const availH = Math.max(32, h - padTop - padBot)
+  const cell = Math.max(4, Math.min(availW / COLS, availH / ROWS))
   const gridW = cell * COLS
   const gridH = cell * ROWS
   return {
     ox: (w - gridW) / 2,
-    oy: padTop + (availH - gridH) / 2,
+    oy: padTop + Math.max(0, availH - gridH) / 2,
     cell,
     gridW,
     gridH,
@@ -204,7 +204,7 @@ function drawTerrain(ctx: CanvasRenderingContext2D, layout: GridLayout, world: W
         for (let i = 0; i < trees; i++) {
           const tx = x + s * (0.25 + hash01(c + i * 8) * 0.5)
           const ty = y + s * (0.3 + hash01(r + i * 5) * 0.45)
-          const rad = s * (0.18 + hash01(i * 13 + c) * 0.14)
+          const rad = Math.max(0.8, s * (0.18 + hash01(i * 13 + c) * 0.14))
           ctx.fillStyle = i % 2 ? '#16351f' : '#0f2a18'
           ctx.beginPath()
           ctx.arc(tx, ty, rad, 0, Math.PI * 2)

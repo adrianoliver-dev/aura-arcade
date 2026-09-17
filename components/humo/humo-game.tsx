@@ -46,6 +46,7 @@ import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { saveGameBest } from '@/lib/arcade/liga'
 import { addXp, xpFromScore } from '@/lib/arcade/progress'
+import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import { HumoEndScreen } from './humo-end-screen'
 import {
   drawFrame,
@@ -770,6 +771,10 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
     return () => window.clearTimeout(id)
   }, [beginPlay, demo, phase])
 
+  useDemoRematch(demo, phase, () => {
+    void startRun()
+  })
+
   useEffect(() => {
     const onUp = () => finishDraw()
     const onCancel = () => {
@@ -822,7 +827,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
           cue={humoCopy.draw}
           accent="#16B57D"
           toBeat={toBeat}
-          interactive={false}
+          onStart={beginPlay}
         />
       ) : null}
 
