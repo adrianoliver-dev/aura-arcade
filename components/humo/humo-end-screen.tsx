@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getWhatsAppHref } from '@/lib/brand/contact'
 import { humoCopy } from '@/lib/humo/copy'
-import { encodeShareSeed } from '@/lib/humo/sim'
+import { encodeShareSeed, FOCO_N } from '@/lib/humo/sim'
 import {
   anotherAlias,
   humoStars,
@@ -133,7 +133,7 @@ export function HumoEndScreen({
         {hectares}
       </p>
       <p className="mt-1 text-center text-sm text-[#D9DCE1]">
-        {humoCopy.ha} · {efficiency}% · {arrived}/3
+        {humoCopy.ha} · {efficiency}% · {arrived}/{FOCO_N}
       </p>
       <p className="mt-2 text-center text-sm">
         {humoCopy.rankToday} <span className="font-semibold">{rankLabel}</span>

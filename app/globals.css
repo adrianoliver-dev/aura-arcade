@@ -1,12 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Share+Tech+Mono&display=swap');
 @import 'tailwindcss';
+
+:root {
+  --color-background: #0b0b10;
+  --color-foreground: #f8fafc;
+  --color-card: #14141c;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #1e293b;
+  --color-jade: #16b57d;
+  --color-gold: #f2a021;
+  --color-ember: #e34b34;
+  --color-violet: #c4b5fd;
+  --color-lime: #7ddc68;
+  --touch-min: 44px;
+  --hud-font: 'Share Tech Mono', ui-monospace, monospace;
+  --body-font: 'Fira Code', ui-monospace, monospace;
+}
 
 html,
 body {
   height: 100%;
-  background: #0a0a0f;
-  color: #fff;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--body-font);
+}
+
+.pulso-shell {
+  font-family: var(--body-font);
+}
+
+.pulso-shell h1,
+.pulso-shell h2,
+.pulso-shell .font-black {
+  font-family: var(--hud-font), var(--body-font), sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+button,
+a,
+[role='button'] {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

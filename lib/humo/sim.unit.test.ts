@@ -90,7 +90,7 @@ describe('ANTES DEL HUMO sim', () => {
     assert.equal(ok?.[0]?.incident, 0)
   })
 
-  it('la partida dura 45s', () => {
-    assert.equal(MATCH_MS, 45_000)
+  it('la partida dura 90s', () => {
+    assert.equal(MATCH_MS, 90_000)
   })
 })

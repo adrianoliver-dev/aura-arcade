@@ -5,6 +5,10 @@ export const COLS = 12
 export const ROWS = 16
 export const SPREAD_MS = 340
 export const SPARK_MS = 28_000
+export const WALL_STOCK_START = 8
+export const WALL_REGEN_MS = 5_200
+export const WALL_STOCK_MAX = 10
+export const WALL_HARD_CAP = 20
 
 export type Cell = { c: number; r: number }
 
@@ -146,16 +150,38 @@ export function tickMuro(live: MuroLive, seed: number, walls: WallMark[], t: num
   return { fire, rng, ticks: live.ticks + 1, burned, houseUp, sparks }
 }
 
+export function stockAt(t: number): number {
+  return Math.min(WALL_STOCK_MAX, WALL_STOCK_START + Math.floor(Math.max(0, t) / WALL_REGEN_MS))
+}
+
+export function legalWalls(walls: WallMark[]): WallMark[] {
+  const sorted = [...walls].sort((a, b) => a.t - b.t)
+  const kept: WallMark[] = []
+  const seen = new Set<string>()
+  for (const w of sorted) {
+    if (kept.length >= WALL_HARD_CAP) break
+    if (w.c < 0 || w.r < 0 || w.c >= COLS || w.r >= ROWS) continue
+    const k = keyOf(w.c, w.r)
+    if (seen.has(k)) continue
+    if (kept.length >= stockAt(w.t)) continue
+    seen.add(k)
+    kept.push(w)
+  }
+  return kept
+}
+
 export function simulateRun(seed: number, walls: WallMark[]): MuroResult {
+  const legal = legalWalls(walls)
   let live = createMuroLive(seed)
   let t = 0
   while (t < MATCH_MS && live.houseUp) {
     t += SPREAD_MS
-    live = tickMuro(live, seed, walls, t)
+    live = tickMuro(live, seed, legal, t)
   }
   const saved = COLS * ROWS - live.burned
   const survived = live.houseUp ? MATCH_MS : t
-  const score = Math.max(0, Math.round(survived / 80 + saved * 2 + (live.houseUp ? 80 : 0)))
+  const spare = Math.max(0, stockAt(survived) - legal.length)
+  const score = Math.max(0, Math.round(survived / 80 + saved * 2 + (live.houseUp ? 80 : 0) + spare * 4))
   return {
     score,
     comboMax: live.houseUp ? 8 : Math.max(1, Math.floor(survived / 12000)),
@@ -177,7 +203,7 @@ export function parseWalls(raw: unknown): WallMark[] | null {
     if (!Number.isInteger(c) || !Number.isInteger(r) || !Number.isFinite(t)) return null
     out.push({ c, r, t })
   }
-  return out
+  return legalWalls(out)
 }
 
 export function muroTitle(score: number, houseUp: boolean): { title: string } {

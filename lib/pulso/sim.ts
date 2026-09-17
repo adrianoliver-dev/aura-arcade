@@ -1,7 +1,7 @@
 /** Simulación determinista de AURA PULSO. Cliente y server usan el mismo código. */
 
 export const TICK_MS = 16
-export const MATCH_MS = 30_000
+export const MATCH_MS = 75_000
 export const CX = 0.5
 export const CY = 0.5
 export const ISLAND_R = 0.078
@@ -11,7 +11,7 @@ export const RING_THICK = 0.036
 export const PERFECT_BAND = 0.016
 export const EMBER_R = 0.02
 export const BREACH_PENALTY = 250
-export const RUSH_START_MS = 27_000
+export const RUSH_START_MS = 68_000
 export const MAX_EMBERS = 12
 
 export type PulseKind = 'PERFECT' | 'DOBLE' | 'CASI' | 'MISS' | 'BRECHA'
@@ -260,7 +260,7 @@ export function countKind(events: PulseEvent[], kind: PulseKind): number {
 
 export function waveAt(t: number): { id: 'levante' | 'norte' | 'chaco' | 'noche'; label: string } {
   if (t >= RUSH_START_MS) return { id: 'noche', label: 'Noche de brasa' }
-  if (t >= 20_000) return { id: 'chaco', label: 'Viento del chaco' }
-  if (t >= 10_000) return { id: 'norte', label: 'Frente norte' }
+  if (t >= 48_000) return { id: 'chaco', label: 'Viento del chaco' }
+  if (t >= 22_000) return { id: 'norte', label: 'Frente norte' }
   return { id: 'levante', label: 'Levante' }
 }

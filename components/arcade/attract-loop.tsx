@@ -202,14 +202,19 @@ export function AttractLoop() {
         </div>
         <Link
           href={game.href}
-          className="mx-auto block max-w-sm rounded-xl py-4 text-center text-lg font-black text-[#0A0A0F]"
+          className="mx-auto block max-w-sm min-h-[52px] rounded-xl py-4 text-center text-lg font-black text-[#0A0A0F]"
           style={{ background: game.accent }}
         >
           JUGÁ {game.title}
         </Link>
-        <Link href="/" className="mt-3 block text-center text-[11px] tracking-[0.2em] text-white/50">
-          SALA COMPLETA
-        </Link>
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <Link href="/" className="text-[11px] tracking-[0.2em] text-white/50">
+            SALA COMPLETA
+          </Link>
+          <Link href="/qr" className="text-[11px] tracking-[0.2em] text-[#F2A021]">
+            QR STAND
+          </Link>
+        </div>
       </div>
     </div>
   )

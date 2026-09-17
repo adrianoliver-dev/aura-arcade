@@ -87,7 +87,7 @@ export function applyEvent(ev: LaneEvent, lane: number, state: LiveScore): 'save
   if (lane === ev.lane) {
     state.hits += 1
     state.combo = 0
-    state.score = Math.max(0, state.score - 22)
+    state.score = Math.max(0, state.score - 40)
     return 'hit'
   }
   state.combo += 1
@@ -123,9 +123,9 @@ export function parseMarks(raw: unknown): LaneMark[] | null {
 
 export function salidaTitle(score: number, rescued: number, hits: number): { title: string } {
   if (hits === 0 && rescued >= 8) return { title: 'Chasqui de oro' }
-  if (rescued >= 10) return { title: 'Sacó al pueblo' }
-  if (score >= 260) return { title: 'Corrió el humo' }
-  if (rescued >= 4) return { title: 'Guía del camino' }
+  if (rescued >= 10 && hits <= 3) return { title: 'Sacó al pueblo' }
+  if (score >= 260 && hits <= 6) return { title: 'Corrió el humo' }
+  if (rescued >= 4 && hits <= 10) return { title: 'Guía del camino' }
   if (score >= 80) return { title: 'Salió con tos' }
   return { title: 'Lo cubrió el humo' }
 }

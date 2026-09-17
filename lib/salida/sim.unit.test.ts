@@ -26,7 +26,12 @@ describe('SALIDA sim', () => {
     assert.ok(s.score > 0)
   })
 
-  it('parsea marcas', () => {
+  it('applyEvent resta fuerte al golpe y parsea marcas', () => {
+    const s = emptyScore()
+    const kind = applyEvent({ t: 1000, lane: 1, kind: 'fuego' }, 1, s)
+    assert.equal(kind, 'hit')
+    assert.equal(s.hits, 1)
+    assert.equal(s.score, 0)
     assert.equal(parseMarks('x'), null)
     assert.ok(parseMarks([{ t: 0, lane: 2 }]))
   })

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { humoCopy } from '@/lib/humo/copy'
 import {
   FREEZE_MS,
+  FOCO_N,
   MATCH_MS,
   TICK_MS,
   astar,
@@ -41,6 +42,8 @@ import {
   unlockPulsoAudio,
 } from '@/components/pulso/pulso-audio'
 
+import { saveGameBest } from '@/lib/arcade/liga'
+import { addXp, xpFromScore } from '@/lib/arcade/progress'
 import { HumoEndScreen } from './humo-end-screen'
 import {
   drawFrame,
@@ -276,6 +279,8 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
       plays: loadPlays() + 1,
     }
     savePersonalBest(localSim.hectares)
+    saveGameBest('humo', localSim.hectares)
+    addXp(xpFromScore(localSim.hectares))
     setResult(local)
     try {
       const res = await fetch('/api/pulso/run/finish', {
@@ -687,7 +692,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
             hectares: prev.hectares,
             efficiency: prev.efficiency,
             left: Math.max(0, MATCH_MS - t),
-            foco: inc ? inc.id + 1 : t >= FREEZE_MS ? 3 : 0,
+            foco: inc ? inc.id + 1 : t >= FREEZE_MS ? FOCO_N : 0,
             freeze: t >= FREEZE_MS,
             ghost: drawingRef.current ? prev.ghost : 0,
             window: inc ? Math.max(0, inc.commitMs - t) : 0,
@@ -844,7 +849,7 @@ export function HumoGame({ demo = false, challengeSeed = null }: Props) {
             <p className={`text-3xl font-black tabular-nums leading-none ${hud.clutch ? 'text-[#E34B34]' : hud.freeze ? 'text-[#C4B5FD]' : ''}`}>
               {secs}s
             </p>
-            <p className="mt-1 text-[11px] text-[#16B57D]">{hud.saved}/3</p>
+            <p className="mt-1 text-[11px] text-[#16B57D]">{hud.saved}/{FOCO_N}</p>
             {hud.freeze ? (
               <p className="font-black tracking-wide text-[#C4B5FD]">{humoCopy.juice.CUT}</p>
             ) : null}

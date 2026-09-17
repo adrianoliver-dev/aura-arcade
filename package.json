@@ -11,7 +11,7 @@
     "dev": "next dev --webpack -p 3020",
     "build": "next build --webpack",
     "start": "next start -p 3020",
-    "test": "node --import tsx --test lib/humo/sim.unit.test.ts lib/radio/sim.unit.test.ts lib/muro/sim.unit.test.ts lib/salida/sim.unit.test.ts"
+    "test": "node --import tsx --test lib/humo/sim.unit.test.ts lib/radio/sim.unit.test.ts lib/muro/sim.unit.test.ts lib/salida/sim.unit.test.ts lib/arcade/progress.unit.test.ts"
   },
   "dependencies": {
     "next": "^16.2.7",

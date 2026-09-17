@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
+import { ArcadeHud } from '@/components/arcade/arcade-hud'
+import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { playHumoClutch, playHumoWhoosh, playPulsoSfx, unlockPulsoAudio } from '@/components/pulso/pulso-audio'
 import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
 import {
@@ -15,6 +17,7 @@ import {
   keyOf,
   muroTitle,
   simulateRun,
+  stockAt,
   tickMuro,
   type MuroLive,
   type WallMark,
@@ -40,7 +43,7 @@ export function MuroGame() {
   const sparksRef = useRef<Spark[]>([])
   const [phase, setPhase] = useState<Phase>('boot')
   const [identity, setIdentity] = useState({ alias: '', tag: 'SCZ' })
-  const [hud, setHud] = useState({ left: MATCH_MS, walls: 0, houseUp: true, threat: 12 })
+  const [hud, setHud] = useState({ left: MATCH_MS, walls: 0, stock: 8, houseUp: true, threat: 12 })
   const [result, setResult] = useState<{
     score: number
     subtitle: string
@@ -76,7 +79,7 @@ export function MuroGame() {
     }
     liveRef.current = createMuroLive(seedRef.current)
     lastSpread.current = 0
-    setHud({ left: MATCH_MS, walls: 0, houseUp: true, threat: 12 })
+    setHud({ left: MATCH_MS, walls: 0, stock: 8, houseUp: true, threat: 12 })
     setPhase('ready')
   }, [])
 
@@ -134,6 +137,10 @@ export function MuroGame() {
     const house = houseCell(seedRef.current)
     if (c === house.c && r === house.r) return
     if (wallsRef.current.some((w) => w.c === c && w.r === r)) return
+    if (wallsRef.current.length >= stockAt(tRef.current)) {
+      playPulsoSfx('miss')
+      return
+    }
     wallsRef.current.push({ c, r, t: tRef.current })
     playHumoWhoosh()
     try {
@@ -153,7 +160,7 @@ export function MuroGame() {
         color: '#C4B5FD',
       })
     }
-    setHud((h) => ({ ...h, walls: wallsRef.current.length }))
+    setHud((h) => ({ ...h, walls: wallsRef.current.length, stock: stockAt(tRef.current) }))
   }
 
   useEffect(() => {
@@ -213,6 +220,7 @@ export function MuroGame() {
         setHud({
           left: MATCH_MS - tRef.current,
           walls: wallsRef.current.length,
+          stock: stockAt(tRef.current),
           houseUp: liveRef.current.houseUp,
           threat,
         })
@@ -295,18 +303,25 @@ export function MuroGame() {
         }}
       />
       {phase === 'ready' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
-          <p className="text-[11px] tracking-[0.32em] text-[#C4B5FD]">MURO</p>
-          <p className="mt-2 text-2xl font-black">Pintá la pared</p>
-          <p className="mt-2 text-sm text-white/60">El fuego camina 90s. Encerralo. Protegé la casa.</p>
-          <p className="mt-6 animate-pulse text-xs tracking-[0.2em] text-[#F2A021]">ARRASTRÁ</p>
-        </div>
+        <ArcadeReady
+          kicker="MURO"
+          title="Pintá la pared"
+          body="Pocos muros. Regeneran. Encerrá el fuego, no el mapa."
+          cue="ARRASTRÁ"
+          accent="#C4B5FD"
+          interactive={false}
+        />
       ) : null}
       {phase === 'play' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-between px-4">
-          <p className="text-xl font-black text-[#C4B5FD]">{hud.walls} muros</p>
-          <p className={`text-2xl font-black ${hud.threat <= 3 ? 'text-[#E34B34]' : ''}`}>{Math.ceil(hud.left / 1000)}s</p>
-        </div>
+        <ArcadeHud
+          score={hud.walls}
+          unit="muros"
+          timeMs={hud.left}
+          accent="#C4B5FD"
+          clutch={hud.threat <= 3}
+          left={<p className="text-[11px] text-white/55">stock {Math.max(0, hud.stock - hud.walls)}</p>}
+          right={<p className="mt-1 text-[11px] text-white/55">{hud.houseUp ? 'casa en pie' : 'cayó'}</p>}
+        />
       ) : null}
       {phase === 'end' && result ? (
         <ArcadeEnd

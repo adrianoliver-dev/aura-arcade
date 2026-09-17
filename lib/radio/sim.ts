@@ -1,9 +1,10 @@
 /** RADIO ROJA — jefe de brigada. Decisiones con reloj. Determinista. */
 
+export type Action = 'agua' | 'corte' | 'evacua'
+
 export const MATCH_MS = 90_000
 export const HOUSES = 3
-
-export type Action = 'agua' | 'corte' | 'evacua'
+export const AMMO_START: Record<Action, number> = { agua: 8, corte: 8, evacua: 8 }
 
 export type Call = {
   id: number
@@ -89,9 +90,14 @@ export function liveCall(t: number, calls: Call[], done: Set<number>): Call | nu
   return open.reduce((a, b) => (a.commitMs <= b.commitMs ? a : b))
 }
 
+export function emptyAmmo(): Record<Action, number> {
+  return { ...AMMO_START }
+}
+
 export function simulateRun(seed: number, decisions: Decision[]): RadioResult {
   const calls = buildCalls(seed)
   const byId = new Map(decisions.map((d) => [d.id, d]))
+  const ammo = emptyAmmo()
   let score = 0
   let combo = 0
   let comboMax = 0
@@ -108,7 +114,9 @@ export function simulateRun(seed: number, decisions: Decision[]): RadioResult {
       continue
     }
     answered += 1
-    if (d.action === call.correct) {
+    const dry = ammo[d.action] <= 0
+    if (!dry) ammo[d.action] -= 1
+    if (!dry && d.action === call.correct) {
       combo += 1
       comboMax = Math.max(comboMax, combo)
       const bonus = 1 + Math.min(combo - 1, 5) * 0.15

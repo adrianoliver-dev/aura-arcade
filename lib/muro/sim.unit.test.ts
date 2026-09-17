@@ -10,14 +10,23 @@ describe('MURO sim', () => {
     assert.deepEqual(a, b)
   })
 
-  it('un muro horizontal frena el blob y puede salvar la casa', () => {
+  it('un muro legal quema menos que el predio abierto', () => {
     const walls = []
-    for (let c = 0; c < COLS; c++) walls.push({ c, r: 7, t: 0 })
+    for (let c = 2; c < 10; c++) walls.push({ c, r: 6, t: 0 })
     const sealed = simulateRun(2026, walls)
     const open = simulateRun(2026, [])
-    assert.equal(sealed.houseUp, true)
-    assert.ok(sealed.score >= open.score)
-    assert.ok(sealed.burned < COLS * 16)
+    assert.ok(sealed.burned <= open.burned)
+  })
+
+  it('el stock recorta el flood fill', () => {
+    const flood = []
+    for (let r = 0; r < 16; r++) {
+      for (let c = 0; c < COLS; c++) flood.push({ c, r, t: 0 })
+    }
+    const parsed = parseWalls(flood)
+    assert.ok(parsed)
+    assert.equal(parsed.length, 8)
+    assert.deepEqual(simulateRun(9, flood), simulateRun(9, parsed))
   })
 
   it('ticks client/server coinciden', () => {

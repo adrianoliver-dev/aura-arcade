@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
+import { ArcadeHud } from '@/components/arcade/arcade-hud'
+import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import { playHumoSave, playPulsoSfx, unlockPulsoAudio } from '@/components/pulso/pulso-audio'
 import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
 import { loadIdentity } from '@/lib/pulso/camba'
@@ -38,7 +40,7 @@ export function SalidaGame() {
   const flashRef = useRef<'ok' | 'bad' | null>(null)
   const [phase, setPhase] = useState<Phase>('boot')
   const [identity, setIdentity] = useState({ alias: '', tag: 'SCZ' })
-  const [hud, setHud] = useState({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1 })
+  const [hud, setHud] = useState({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1, hits: 0 })
   const [result, setResult] = useState<{
     score: number
     subtitle: string
@@ -75,7 +77,7 @@ export function SalidaGame() {
       setIdentity(loadIdentity(String(seedRef.current)))
     }
     trackRef.current = buildTrack(seedRef.current)
-    setHud({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1 })
+    setHud({ left: MATCH_MS, score: 0, rescued: 0, combo: 0, lane: 1, hits: 0 })
     setPhase('ready')
   }, [])
 
@@ -204,6 +206,7 @@ export function SalidaGame() {
           rescued: scoreRef.current.rescued,
           combo: scoreRef.current.combo,
           lane: laneRef.current,
+          hits: scoreRef.current.hits,
         })
         if (t >= MATCH_MS) void finish()
       } else {
@@ -279,22 +282,29 @@ export function SalidaGame() {
         }}
       />
       {phase === 'ready' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-[12%] text-center">
-          <p className="text-[11px] tracking-[0.32em] text-[#7DDC68]">SALIDA</p>
-          <p className="mt-2 text-2xl font-black">Tres caminos</p>
-          <p className="mt-2 text-sm text-white/60">Tocá un carril. Evitá el fuego. Agarrá a la gente. 90s.</p>
-          <p className="mt-6 animate-pulse text-xs tracking-[0.2em] text-[#F2A021]">TOCÁ · ← →</p>
-        </div>
+        <ArcadeReady
+          kicker="SALIDA"
+          title="Tres caminos"
+          body="Tocá un carril. Evitá el fuego. Agarrá a la gente. Tankear no da título."
+          cue="TOCÁ · ← →"
+          accent="#7DDC68"
+          interactive={false}
+        />
       ) : null}
       {phase === 'play' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-16 flex justify-between px-4">
-          <div>
-            <p className="text-3xl font-black text-[#F2A021]">{hud.score}</p>
-            {hud.combo > 1 ? <p className="text-sm font-black text-[#C4B5FD]">x{hud.combo}</p> : null}
-          </div>
-          <p className="text-sm text-[#7DDC68]">{hud.rescued} sacados</p>
-          <p className="text-2xl font-black">{Math.ceil(hud.left / 1000)}s</p>
-        </div>
+        <ArcadeHud
+          score={hud.score}
+          timeMs={hud.left}
+          accent="#7DDC68"
+          clutch={hud.hits > 4}
+          left={
+            <>
+              {hud.combo > 1 ? <p className="text-sm font-black text-[#C4B5FD]">x{hud.combo}</p> : null}
+              <p className="text-[11px] text-[#7DDC68]">{hud.rescued} sacados</p>
+            </>
+          }
+          right={<p className="mt-1 text-[11px] text-white/55">{hud.hits} golpes</p>}
+        />
       ) : null}
       {phase === 'end' && result ? (
         <ArcadeEnd

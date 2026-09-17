@@ -44,6 +44,8 @@ import {
   unlockPulsoAudio,
 } from './pulso-audio'
 import { PulsoEndScreen } from './pulso-end-screen'
+import { saveGameBest } from '@/lib/arcade/liga'
+import { addXp, xpFromScore } from '@/lib/arcade/progress'
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
@@ -269,6 +271,8 @@ export function PulsoGame({ demo = false }: Props) {
       }
     }
     savePersonalBest(state.score)
+    saveGameBest('anillos', state.score)
+    addXp(xpFromScore(state.score))
     setResult({ ...local, plays: loadPlays() })
   }, [])
 

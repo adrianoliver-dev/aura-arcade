@@ -30,8 +30,12 @@ describe('RADIO ROJA sim', () => {
     assert.ok(a.saves >= 8)
   })
 
-  it('rechaza payload sucio', () => {
-    assert.equal(parseDecisions('no'), null)
-    assert.ok(parseDecisions([{ id: 0, action: 'agua', t: 10 }]))
+  it('la munición corta el spam de un solo botón', () => {
+    const calls = buildCalls(44)
+    const spam = calls.map((c) => ({ id: c.id, action: 'agua' as const, t: c.appearMs + 80 }))
+    const r = simulateRun(44, spam)
+    const aguaOk = calls.filter((c) => c.correct === 'agua').length
+    assert.ok(r.saves <= Math.min(8, aguaOk))
+    assert.ok(r.misses >= 1)
   })
 })

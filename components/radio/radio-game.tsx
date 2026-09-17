@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ArcadeEnd } from '@/components/arcade/arcade-end'
+import { ArcadeHud } from '@/components/arcade/arcade-hud'
+import { ArcadeReady } from '@/components/arcade/arcade-ready'
 import {
   playHumoClutch,
   playHumoSave,
@@ -12,6 +14,7 @@ import {
 import {
   MATCH_MS,
   buildCalls,
+  emptyAmmo,
   liveCall,
   radioTitle,
   simulateRun,
@@ -24,7 +27,7 @@ import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
 import type { BoardEntry } from '@/lib/pulso/types'
 
 const ACTIONS: { id: Action; label: string; hint: string; color: string }[] = [
-  { id: 'agua', label: 'AGUA', hint: 'Apagá', color: '#3B82F6' },
+  { id: 'agua', label: 'AGUA', hint: 'Apagá', color: '#1F9ED8' },
   { id: 'corte', label: 'CORTE', hint: 'Pared', color: '#F2A021' },
   { id: 'evacua', label: 'EVACUÁ', hint: 'Gente', color: '#E34B34' },
 ]
@@ -41,6 +44,7 @@ export function RadioGame() {
   const clutchRef = useRef(new Set<number>())
   const lastRef = useRef(0)
   const endedRef = useRef(false)
+  const ammoRef = useRef(emptyAmmo())
   const [phase, setPhase] = useState<Phase>('boot')
   const [identity, setIdentity] = useState({ alias: '', tag: 'SCZ' })
   const [hud, setHud] = useState({
@@ -51,6 +55,7 @@ export function RadioGame() {
     juice: '',
     call: null as Call | null,
     clutch: false,
+    ammo: emptyAmmo(),
   })
   const [shake, setShake] = useState(0)
   const [flash, setFlash] = useState<'ok' | 'bad' | null>(null)
@@ -74,6 +79,7 @@ export function RadioGame() {
     clutchRef.current = new Set()
     decisionsRef.current = []
     endedRef.current = false
+    ammoRef.current = emptyAmmo()
     const id = loadIdentity(String(seedRef.current))
     setIdentity(id)
     try {
@@ -99,7 +105,7 @@ export function RadioGame() {
       callsRef.current = buildCalls(seedRef.current)
       setIdentity(loadIdentity(String(seedRef.current)))
     }
-    setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false })
+    setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false, ammo: emptyAmmo() })
     setPhase('ready')
   }, [])
 
@@ -165,8 +171,10 @@ export function RadioGame() {
       const call = liveCall(tRef.current, callsRef.current, doneRef.current)
       if (!call) return
       doneRef.current.add(call.id)
+      const dry = ammoRef.current[action] <= 0
+      if (!dry) ammoRef.current[action] -= 1
       decisionsRef.current.push({ id: call.id, action, t: tRef.current })
-      const ok = action === call.correct
+      const ok = !dry && action === call.correct
       try {
         navigator.vibrate?.(ok ? 18 : 42)
       } catch {
@@ -185,24 +193,33 @@ export function RadioGame() {
             juice: streak >= 3 ? `x${streak}` : '¡SÍ!',
             call: null,
             clutch: false,
+            ammo: { ...ammoRef.current },
           }
         })
       } else {
         playPulsoSfx('miss')
         setFlash('bad')
         setShake(12)
-        setHud((h) => ({
-          ...h,
-          streak: 0,
-          houses: Math.max(0, h.houses - 1),
-          juice: 'NO',
-          call: null,
-          clutch: false,
-        }))
+        setHud((h) => {
+          const houses = Math.max(0, h.houses - 1)
+          if (houses === 0) {
+            setPhase('end')
+            void finish()
+          }
+          return {
+            ...h,
+            streak: 0,
+            houses,
+            juice: dry ? 'SIN CARGA' : 'NO',
+            call: null,
+            clutch: false,
+            ammo: { ...ammoRef.current },
+          }
+        })
       }
       window.setTimeout(() => setFlash(null), 180)
     },
-    [phase],
+    [finish, phase],
   )
 
   useEffect(() => {
@@ -214,6 +231,7 @@ export function RadioGame() {
       lastRef.current = now
       tRef.current = Math.min(MATCH_MS, tRef.current + dt)
       const t = tRef.current
+      if (endedRef.current) return
       const call = liveCall(t, callsRef.current, doneRef.current)
       if (call && !doneRef.current.has(call.id)) {
         const left = call.commitMs - t
@@ -226,12 +244,19 @@ export function RadioGame() {
         if (t >= c.commitMs && !doneRef.current.has(c.id)) {
           doneRef.current.add(c.id)
           playPulsoSfx('brecha')
-          setHud((h) => ({
-            ...h,
-            streak: 0,
-            houses: Math.max(0, h.houses - 1),
-            juice: 'TARDE',
-          }))
+          setHud((h) => {
+            const houses = Math.max(0, h.houses - 1)
+            if (houses === 0) {
+              setPhase('end')
+              void finish()
+            }
+            return {
+              ...h,
+              streak: 0,
+              houses,
+              juice: 'TARDE',
+            }
+          })
         }
       }
       setHud((h) => ({
@@ -290,37 +315,41 @@ export function RadioGame() {
       ) : null}
 
       {phase === 'ready' ? (
-        <button
-          type="button"
-          className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
-          onClick={() => {
+        <ArcadeReady
+          kicker="RADIO ROJA"
+          title="El predio llama."
+          body="Tres botones. Munición corta. Cada error quema una casa."
+          cue="TOCÁ · 90s"
+          accent="#E34B34"
+          toBeat={toBeat}
+          onStart={() => {
             void unlockPulsoAudio()
             tRef.current = 0
             lastRef.current = performance.now()
             setPhase('play')
           }}
-        >
-          <p className="text-[11px] tracking-[0.32em] text-[#E34B34]">RADIO ROJA</p>
-          <p className="mt-3 text-3xl font-black">El predio llama.</p>
-          <p className="mt-3 max-w-xs text-sm text-white/70">Tres botones. Poco tiempo. Cada error quema una casa.</p>
-          {toBeat > 0 ? <p className="mt-3 text-xs text-white/45">A vencer {toBeat}</p> : null}
-          <p className="mt-8 animate-pulse text-xs tracking-[0.2em] text-[#F2A021]">TOCÁ · 90s</p>
-        </button>
+        />
       ) : null}
 
       {phase === 'play' ? (
-        <div className="flex h-full flex-col px-4 pb-5 pt-14">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-4xl font-black tabular-nums text-[#F2A021]">{hud.score}</p>
-              <p className="text-[11px] text-white/50">pts</p>
-              {hud.streak > 1 ? <p className="text-sm font-black text-[#C4B5FD]">x{hud.streak}</p> : null}
-            </div>
-            <div className="text-right">
-              <p className={`text-3xl font-black ${hud.clutch ? 'text-[#E34B34]' : ''}`}>{Math.ceil(hud.left / 1000)}s</p>
-              <p className="mt-1 text-lg tracking-[0.2em]">{'⌂'.repeat(hud.houses)}{'·'.repeat(Math.max(0, 3 - hud.houses))}</p>
-            </div>
-          </div>
+        <div className="flex h-full flex-col px-4 pb-[max(1.1rem,env(safe-area-inset-bottom))] pt-24">
+          <ArcadeHud
+            score={hud.score}
+            timeMs={hud.left}
+            accent="#E34B34"
+            clutch={hud.clutch}
+            left={
+              <>
+                {hud.streak > 1 ? <p className="text-sm font-black text-[#C4B5FD]">x{hud.streak}</p> : null}
+              </>
+            }
+            right={
+              <p className="mt-1 font-[family-name:var(--hud-font)] text-sm tracking-[0.18em] text-white/80">
+                {'⌂'.repeat(hud.houses)}
+                {'·'.repeat(Math.max(0, 3 - hud.houses))}
+              </p>
+            }
+          />
 
           <div className="mt-4 min-h-[9.5rem] rounded-2xl border border-[#E34B34]/40 bg-[#E34B34]/10 p-4 text-center">
             {call ? (
@@ -352,11 +381,12 @@ export function RadioGame() {
                   event.preventDefault()
                   pick(a.id)
                 }}
-                className="rounded-xl py-5 text-center font-black disabled:opacity-40"
+                className="min-h-[92px] rounded-xl py-4 text-center font-black disabled:opacity-40"
                 style={{ background: a.color, color: '#0A0A0F' }}
               >
                 <span className="block text-lg">{a.label}</span>
                 <span className="block text-[11px] font-semibold opacity-80">{a.hint}</span>
+                <span className="mt-1 block font-[family-name:var(--hud-font)] text-[11px]">{hud.ammo[a.id]}</span>
               </button>
             ))}
           </div>

@@ -75,6 +75,6 @@ export const humoCopy = {
     STREAK2: 'x2',
     STREAK3: 'x3',
     CLUTCH: 'YA',
-    FOCO: (n: number) => `${n}/3`,
+    FOCO: (n: number) => `${n}/${11}`,
   },
 } as const

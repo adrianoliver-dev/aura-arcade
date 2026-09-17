@@ -1,12 +1,12 @@
 /** Simulación determinista de AURA: ANTES DEL HUMO. Cliente y server usan el mismo código. */
 
 export const TICK_MS = 16
-export const MATCH_MS = 45_000
+export const MATCH_MS = 90_000
 export const COLS = 16
 export const ROWS = 22
 export const HA_PER_CELL = 1
 export const MAX_STROKE_POINTS = 96
-export const FREEZE_MS = 43_000
+export const FREEZE_MS = 88_000
 
 const WINDOWS: { appearMs: number; commitMs: number; radius: number; spreadMs: number }[] = [
   { appearMs: 0, commitMs: 8_000, radius: 2, spreadMs: 1_700 },
@@ -16,6 +16,10 @@ const WINDOWS: { appearMs: number; commitMs: number; radius: number; spreadMs: n
   { appearMs: 17_000, commitMs: 28_000, radius: 3, spreadMs: 1_100 },
   { appearMs: 24_000, commitMs: 35_500, radius: 3, spreadMs: 1_000 },
   { appearMs: 31_500, commitMs: 42_000, radius: 4, spreadMs: 850 },
+  { appearMs: 40_000, commitMs: 54_000, radius: 4, spreadMs: 800 },
+  { appearMs: 52_000, commitMs: 68_000, radius: 4, spreadMs: 720 },
+  { appearMs: 64_000, commitMs: 80_000, radius: 4, spreadMs: 680 },
+  { appearMs: 76_000, commitMs: 88_000, radius: 4, spreadMs: 640 },
 ]
 
 export const FOCO_N = WINDOWS.length

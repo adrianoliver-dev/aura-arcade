@@ -1,5 +1,7 @@
 /** Apodos y títulos de Fexpocruz — español camba, nunca “Visitante”. */
 
+import { FOCO_N } from '@/lib/humo/sim'
+
 export const CAMBA_ALIAS = [
   'Yacare',
   'Patuju',
@@ -364,28 +366,28 @@ export function humoMissionProgress(
 }
 
 export function humoTitle(hectares: number, efficiency: number, arrived = 0): PulsoTitle {
-  if (hectares >= 100 && arrived === 3) {
+  if (hectares >= 140 && arrived >= FOCO_N - 1) {
     return { title: 'Leyenda viva', blurb: '' }
   }
-  if (hectares >= 80 && arrived === 3) {
+  if (hectares >= 110 && arrived >= FOCO_N - 2) {
     return { title: 'Leyenda del pabellón', blurb: '' }
   }
-  if (arrived === 3 && hectares >= 60) {
-    return { title: 'Triple camba', blurb: '' }
+  if (arrived >= FOCO_N - 2 && hectares >= 80) {
+    return { title: 'Brigada completa', blurb: '' }
   }
-  if (hectares >= 70) {
+  if (hectares >= 90) {
     return { title: 'Tajibo de oro', blurb: '' }
   }
-  if (hectares >= 55) {
+  if (hectares >= 70) {
     return { title: 'Dueño del predio', blurb: '' }
   }
-  if (arrived === 3) {
+  if (arrived >= 8) {
     return { title: 'Capitán de brigada', blurb: '' }
   }
-  if (hectares >= 45) {
+  if (hectares >= 55) {
     return { title: 'Cortafuego', blurb: '' }
   }
-  if (hectares >= 35) {
+  if (hectares >= 40) {
     return { title: 'Guardián del chaco', blurb: '' }
   }
   if (efficiency >= 85 && hectares >= 20) {
@@ -394,7 +396,7 @@ export function humoTitle(hectares: number, efficiency: number, arrived = 0): Pu
   if (hectares >= 25) {
     return { title: 'Ojo de tigre', blurb: '' }
   }
-  if (arrived >= 2) {
+  if (arrived >= 4) {
     return { title: 'Camba alerta', blurb: '' }
   }
   if (hectares >= 12) {
@@ -407,8 +409,8 @@ export function humoTitle(hectares: number, efficiency: number, arrived = 0): Pu
 }
 
 export function humoStars(hectares: number, efficiency: number, arrived: number): 1 | 2 | 3 {
-  if (hectares >= 70 && arrived === 3) return 3
-  if (hectares >= 35 || arrived >= 2 || efficiency >= 80) return 2
+  if (hectares >= 90 && arrived >= 8) return 3
+  if (hectares >= 40 || arrived >= 4 || efficiency >= 80) return 2
   return 1
 }
 
