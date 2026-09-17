@@ -1,0 +1,6 @@
+# Audio original de AURA PULSO (Fexpocruz)
+# Generado para Aura con ElevenLabs Sound Generation. No es pack de terceros.
+# code: Aura Front (propietario)
+# assets: original ElevenLabs SFX para este juego
+# ip: ORIGINAL-IP
+# verdict: ORIGINAL-IP
