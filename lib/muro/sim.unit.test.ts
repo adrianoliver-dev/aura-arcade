@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { COLS, MATCH_MS, createMuroLive, parseWalls, simulateRun, tickMuro } from './sim'
+import { COLS, MATCH_MS, SPREAD_MS, createMuroLive, parseWalls, simulateRun, tickMuro } from './sim'
 
 describe('MURO sim', () => {
   it('sin muros el fuego avanza igual dos veces', () => {
@@ -33,7 +33,7 @@ describe('MURO sim', () => {
     let live = createMuroLive(3)
     let t = 0
     while (t < 8000) {
-      t += 340
+      t += SPREAD_MS
       live = tickMuro(live, 3, [], t)
     }
     assert.ok(live.burned >= 2)

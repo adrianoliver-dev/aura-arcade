@@ -8,6 +8,8 @@ node_modules
 .DS_Store
 tsconfig.tsbuildinfo
 .chrome-rec
+assets/fonts/*.ttf
 public/trailers/qa/
 public/trailers/qa2/
 public/trailers/qa3/
+public/trailers/mpt/qa/

@@ -345,7 +345,7 @@ export function MuroGame({ demo = false }: { demo?: boolean }) {
         <ArcadeReady
           kicker="MURO"
           title="Pintá la pared"
-          body="Pocos muros. Regeneran. Encerrá el fuego, no el mapa."
+          body="Anillá la casa. El fuego da la vuelta. No alcanza para pintar todo el lote."
           cue="ARRASTRÁ"
           accent="#C4B5FD"
           onStart={() => {

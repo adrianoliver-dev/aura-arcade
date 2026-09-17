@@ -71,9 +71,12 @@ export function ArcadeHub() {
                   <p className="mt-2 text-[11px]" style={{ color: game.accent }}>
                     Misión: {mission.label}
                   </p>
-                  <p className="mt-3 min-h-11 text-sm font-black tracking-[0.14em]" style={{ color: game.accent }}>
+                  <span
+                    className="mt-4 inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-2xl px-4 text-sm font-black tracking-[0.16em] text-[#0B0B10]"
+                    style={{ background: game.accent }}
+                  >
                     JUGÁ
-                  </p>
+                  </span>
                 </div>
               </a>
             </li>

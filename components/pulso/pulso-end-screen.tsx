@@ -1,6 +1,8 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+
+import { logPlaytest } from '@/lib/arcade/session-log'
 
 import { getWhatsAppHref } from '@/lib/brand/contact'
 import {
@@ -73,6 +75,10 @@ export function PulsoEndScreen({
     : null
 
   const shareText = pulsoCopy.shareText(score, prize.title)
+
+  useEffect(() => {
+    logPlaytest('PULSO', score, !runToken)
+  }, [runToken, score])
 
   const share = useCallback(async () => {
     try {

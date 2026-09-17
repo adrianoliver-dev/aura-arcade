@@ -3,7 +3,7 @@
 export const MATCH_MS = 90_000
 export const COLS = 12
 export const ROWS = 16
-export const SPREAD_MS = 340
+export const SPREAD_MS = 720
 export const SPARK_MS = 28_000
 export const WALL_STOCK_START = 8
 export const WALL_REGEN_MS = 5_200

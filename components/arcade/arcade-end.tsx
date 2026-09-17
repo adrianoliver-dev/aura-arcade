@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { addXp, heatFromXp, loadXp, xpFromScore } from '@/lib/arcade/progress'
+import { logPlaytest } from '@/lib/arcade/session-log'
 import { anotherAlias, saveIdentity } from '@/lib/pulso/camba'
 import type { BoardEntry } from '@/lib/pulso/types'
 
@@ -54,7 +55,8 @@ export function ArcadeEnd({
     if (granted.current) return
     granted.current = true
     setXpNow(addXp(gained))
-  }, [gained])
+    logPlaytest(game, score, !runToken)
+  }, [gained, game, runToken, score])
 
   const share = useCallback(async () => {
     try {
@@ -90,18 +92,25 @@ export function ArcadeEnd({
   const heat = heatFromXp(xpNow || loadXp())
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#0B0B10]/96 px-4 py-[max(1.25rem,env(safe-area-inset-top))] [touch-action:pan-y]">
-      <p className="text-center font-[family-name:var(--hud-font)] text-[11px] tracking-[0.32em] text-[#16B57D]">{game}</p>
-      <p className="mt-2 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#F2A021]">{title}</p>
-      <p className="mt-3 text-center text-7xl font-black tabular-nums text-[#F2A021]">{score}</p>
-      <p className="mt-1 text-center text-sm text-[#D9DCE1]">{unit}</p>
-      <p className="mt-1 text-center text-xs text-white/50">{subtitle}</p>
-      <p className="mt-3 text-center text-sm">
-        Hoy <span className="font-semibold">{rankLabel}</span>
-        {rank != null && rank > 1 ? ` · −${gap}` : ''}
+    <div className="absolute inset-0 z-20 flex flex-col overflow-y-auto bg-[#0B0B10] px-4 py-[max(1.25rem,env(safe-area-inset-top))] [touch-action:pan-y]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,#F2A02122,transparent_50%)]" />
+      <p className="relative text-center font-[family-name:var(--hud-font)] text-[11px] tracking-[0.32em] text-[#16B57D]">{game}</p>
+      <p className="relative mt-2 text-center text-sm font-black uppercase tracking-[0.18em] text-[#F2A021]">{title}</p>
+      <p className="relative mt-4 text-center text-8xl font-black tabular-nums leading-none text-[#F2A021] drop-shadow-[0_0_28px_#F2A02188]">
+        {score}
       </p>
-      <p className="mt-1 text-center text-xs text-[#16B57D]">{isRecord ? 'Récord' : `Mejor ${Math.max(personalBest, score)}`}</p>
-      <p className="mt-2 text-center font-[family-name:var(--hud-font)] text-[11px] tracking-[0.18em] text-[#F2A021]">
+      <p className="relative mt-2 text-center text-sm uppercase tracking-[0.2em] text-white/70">{unit}</p>
+      <p className="relative mt-2 text-center text-sm text-white/60">{subtitle}</p>
+      <div className="relative mx-auto mt-4 flex min-h-11 items-center justify-center gap-3 text-sm">
+        <span className="rounded-full border border-white/15 px-3 py-1.5">
+          Hoy <span className="font-semibold">{rankLabel}</span>
+          {rank != null && rank > 1 ? ` · −${gap}` : ''}
+        </span>
+        <span className="rounded-full border border-[#16B57D]/40 px-3 py-1.5 text-[#16B57D]">
+          {isRecord ? 'Récord' : `Mejor ${Math.max(personalBest, score)}`}
+        </span>
+      </div>
+      <p className="relative mt-3 text-center font-[family-name:var(--hud-font)] text-[11px] tracking-[0.18em] text-[#F2A021]">
         +{gained} XP · Calor {heat}
       </p>
 
@@ -175,13 +184,15 @@ export function ArcadeEnd({
         </button>
       ) : null}
 
-      <div className="mx-auto mt-4 flex w-full max-w-sm flex-col gap-2 pb-8">
-        <button type="button" onClick={() => void share()} className="min-h-[48px] rounded-lg bg-[#25D366] text-sm font-bold text-[#0A0A0F]">
-          WhatsApp
-        </button>
-        <button type="button" onClick={onRematch} className="min-h-[48px] rounded-lg bg-[#F2A021] text-sm font-bold text-[#0A0A0F]">
-          Otra
-        </button>
+      <div className="relative mx-auto mt-auto w-full max-w-sm bg-gradient-to-t from-[#0B0B10] via-[#0B0B10] to-transparent pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex flex-col gap-3">
+          <button type="button" onClick={() => void share()} className="min-h-12 rounded-2xl bg-[#25D366] text-base font-black text-[#0A0A0F]">
+            WhatsApp
+          </button>
+          <button type="button" onClick={onRematch} className="min-h-12 rounded-2xl bg-[#F2A021] text-base font-black text-[#0A0A0F]">
+            Otra ronda
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -46,11 +46,11 @@ export function ArcadeReel() {
       {slide.id === 'salida' ? <SalidaGame demo /> : null}
       {slide.id === 'qr' ? <QrStand /> : null}
       {slide.id !== 'qr' && slide.id !== 'intro' ? (
-        <div className="pointer-events-none absolute inset-x-0 top-[5.75rem] z-40 text-center">
-          <p className="font-[family-name:var(--hud-font)] text-2xl font-black tracking-tight text-white drop-shadow-[0_2px_8px_#000]">
+        <div className="pointer-events-none absolute inset-x-0 bottom-32 z-40 text-center">
+          <p className="inline-block rounded-full bg-black/70 px-4 py-2 font-[family-name:var(--hud-font)] text-lg font-black tracking-tight text-white">
             {slide.title}
+            <span className="ml-2 text-sm font-semibold text-[#F2A021]">{slide.hook}</span>
           </p>
-          <p className="mt-1 text-sm font-semibold text-[#F2A021] drop-shadow-[0_2px_8px_#000]">{slide.hook}</p>
         </div>
       ) : null}
       <div className="pointer-events-none absolute bottom-3 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1.5">

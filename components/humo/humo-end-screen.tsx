@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { getWhatsAppHref } from '@/lib/brand/contact'
+import { logPlaytest } from '@/lib/arcade/session-log'
 import { humoCopy } from '@/lib/humo/copy'
 import { encodeShareSeed, FOCO_N } from '@/lib/humo/sim'
 import {
@@ -69,8 +70,9 @@ export function HumoEndScreen({
 
   useEffect(() => {
     const id = window.setTimeout(() => setPop(true), 30)
+    logPlaytest('HUMO', hectares, !runToken)
     return () => window.clearTimeout(id)
-  }, [])
+  }, [hectares, runToken])
 
   const share = useCallback(async () => {
     if (navigator.share) {

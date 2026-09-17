@@ -27,6 +27,15 @@ Hallazgos cortos:
 - Overlay de títulos ya no cubre los botones de RADIO (pasó arriba del HUD).
 - Falta playtest de 30 min por juego (battery ≠ mesa).
 
+## Sesión 2026-09-17 16:45 UI + MPT + mesa MURO
+
+- HUD en esquinas (score izq, timer der) + barra de tiempo. Boot con anillo. Ready con CTA 48px. End con chips de rank y CTAs grandes.
+- Arcade 4/5 centrado, ya no tapa el score.
+- MURO: fuego a 340ms llenaba el mapa en ~4s hasta la casa. SPREAD_MS=720. Copy: anillar la casa, no pintar el lote. Stock 8 = un anillo.
+- MPT títulos: `public/trailers/mpt/loop-fexpo-16x9.mp4`, `redes-a-pulso.mp4`, `redes-b-qr.mp4` (FFmpeg drawtext, font Arial Bold local).
+- ChatGPT Images: chat `https://chatgpt.com/c/WEB:995d615a-a310-4609-a5a0-353e1f999b5d` still hub (en curso).
+- Tests 26/26.
+
 ## Sesión 2026-09-17 16:22 mesa
 
 - Hub: `next/link` no navegaba; pasó a `<a href>`. PULSO abre.
