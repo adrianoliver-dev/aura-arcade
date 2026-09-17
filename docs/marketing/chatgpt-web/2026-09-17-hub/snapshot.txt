@@ -1,0 +1,3 @@
+﻿chat: https://chatgpt.com/c/6aac51cf-acec-83e9-a51e-ae0c0d6ab02a
+shot: arcade-hub KEEP (1 frame, 5 cards JUGÁ, heat bar)
+full PNG: Save clicked in ChatGPT fullscreen; Cursor browser did not land a file in Downloads. Viewport preview copied. Native PNG still 941x1672 in the thread.
