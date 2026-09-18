@@ -13,6 +13,7 @@ import {
   daySeed,
   encodeShareSeed,
   firstGuidePath,
+  guidePath,
   optimalStrokes,
   parseShareSeed,
   parseStrokes,
@@ -108,6 +109,12 @@ describe('ANTES DEL HUMO sim', () => {
     assert.equal(MATCH_MS, 40_000)
     assert.equal(FOCO_N, 3)
     assert.equal(TELEGRAPH_MS, 4_000)
+  })
+
+  it('guidePath de casa coincide con firstGuidePath', () => {
+    const world = createWorld(2026)
+    assert.deepEqual(guidePath(world, world.incidents[0]!), firstGuidePath(world))
+    assert.ok(guidePath(world, world.incidents[1]!).length >= 2)
   })
 
   it('los tres pulsos siguen el brief P2', () => {

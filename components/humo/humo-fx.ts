@@ -77,18 +77,16 @@ export function hash01(n: number): number {
 export function gridLayout(w: number, h: number): GridLayout {
   const portrait = h >= w * 0.92
   if (portrait) {
-    const padX = Math.max(6, w * 0.018)
-    const gridW = w - padX * 2
+    const gridW = w
     const gridH = Math.min(h * 0.72, Math.max(h * 0.62, h * 0.68))
-    const sky = Math.max(48, h * 0.11)
-    const leftover = h - sky - gridH
-    const oy = sky + leftover * 0.12
+    const sky = Math.max(40, h * 0.075)
+    const oy = sky
     const cellW = gridW / COLS
     const cellH = gridH / ROWS
-    return { ox: padX, oy, cell: Math.min(cellW, cellH), cellW, cellH, gridW, gridH }
+    return { ox: 0, oy, cell: Math.min(cellW, cellH), cellW, cellH, gridW, gridH }
   }
-  const padY = Math.max(16, h * 0.045)
-  const padX = Math.max(24, w * 0.07)
+  const padY = Math.max(8, h * 0.02)
+  const padX = Math.max(8, w * 0.015)
   const gridH = h - padY * 2
   const gridW = w - padX * 2
   const ox = (w - gridW) / 2
@@ -220,145 +218,58 @@ function noisyBlob(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: nu
 function drawSky(ctx: CanvasRenderingContext2D, w: number, h: number, clutch: boolean, now: number, reduced: boolean) {
   const t = clock(now, reduced)
   const g = ctx.createLinearGradient(0, 0, 0, h)
-  g.addColorStop(0, clutch ? '#2a1810' : '#1c261c')
-  g.addColorStop(0.18, clutch ? '#24140e' : '#152018')
-  g.addColorStop(0.45, NIGHT)
-  g.addColorStop(1, clutch ? '#1a100c' : '#12100c')
+  g.addColorStop(0, clutch ? '#3a2214' : '#24301f')
+  g.addColorStop(0.12, clutch ? '#4a2a16' : '#3d2a18')
+  g.addColorStop(0.22, clutch ? '#2a1810' : '#1a2218')
+  g.addColorStop(0.55, NIGHT)
+  g.addColorStop(1, '#0a0e0c')
   ctx.fillStyle = g
   ctx.fillRect(0, 0, w, h)
 
-  const sunX = w * 0.78
-  const sunY = h * 0.08
-  const sun = ctx.createRadialGradient(sunX, sunY, 4, sunX, sunY, Math.max(w, h) * 0.28)
-  sun.addColorStop(0, `rgba(255,159,28,${clutch ? 0.28 : 0.16})`)
+  const sunX = w * 0.72
+  const sunY = h * 0.07
+  const sun = ctx.createRadialGradient(sunX, sunY, 2, sunX, sunY, Math.max(w, h) * 0.34)
+  sun.addColorStop(0, `rgba(255,159,28,${clutch ? 0.42 : 0.22})`)
+  sun.addColorStop(0.35, `rgba(255,90,54,${clutch ? 0.16 : 0.08})`)
   sun.addColorStop(1, 'rgba(255,90,54,0)')
   ctx.fillStyle = sun
-  ctx.fillRect(0, 0, w, h * 0.42)
+  ctx.fillRect(0, 0, w, h * 0.38)
 
-  ctx.fillStyle = '#1a241c'
+  ctx.fillStyle = clutch ? '#1a100c' : '#141c14'
   ctx.beginPath()
-  ctx.moveTo(0, h * 0.2)
-  for (let i = 0; i <= 8; i++) {
-    const x = (i / 8) * w
-    const y = h * (0.13 + hash01(i * 4.2) * 0.07 + Math.sin(t / 9000 + i) * 0.004)
+  ctx.moveTo(0, h * 0.16)
+  for (let i = 0; i <= 12; i++) {
+    const x = (i / 12) * w
+    const y = h * (0.09 + hash01(i * 3.1) * 0.055 + Math.sin(t / 11000 + i) * 0.003)
     ctx.lineTo(x, y)
   }
-  ctx.lineTo(w, h * 0.28)
-  ctx.lineTo(0, h * 0.28)
+  ctx.lineTo(w, h * 0.22)
+  ctx.lineTo(0, h * 0.22)
   ctx.fill()
 }
 
-function predioEdge(ctx: CanvasRenderingContext2D, layout: GridLayout, seed: number) {
-  const { ox, oy, gridW, gridH } = layout
-  ctx.beginPath()
-  const n = 18
-  for (let i = 0; i <= n; i++) {
-    const u = i / n
-    const x = ox + u * gridW + (hash01(seed + i) - 0.5) * 6
-    const y = oy + (hash01(seed * 3 + i) - 0.5) * 5
-    if (i === 0) ctx.moveTo(x, y)
-    else ctx.lineTo(x, y)
-  }
-  for (let i = 1; i <= n; i++) {
-    const u = i / n
-    ctx.lineTo(ox + gridW + (hash01(seed + 40 + i) - 0.5) * 5, oy + u * gridH)
-  }
-  for (let i = 1; i <= n; i++) {
-    const u = i / n
-    ctx.lineTo(ox + gridW - u * gridW, oy + gridH + (hash01(seed + 80 + i) - 0.5) * 6)
-  }
-  for (let i = 1; i <= n; i++) {
-    const u = i / n
-    ctx.lineTo(ox + (hash01(seed + 120 + i) - 0.5) * 5, oy + gridH - u * gridH)
-  }
-  ctx.closePath()
-}
-
-function drawTerrain(ctx: CanvasRenderingContext2D, layout: GridLayout, world: World, now: number, reduced: boolean) {
-  const t = clock(now, reduced)
-  predioEdge(ctx, layout, world.seed)
-  ctx.save()
-  ctx.clip()
-  const soil = ctx.createLinearGradient(layout.ox, layout.oy, layout.ox, layout.oy + layout.gridH)
-  soil.addColorStop(0, '#4a3320')
-  soil.addColorStop(0.45, '#3a2718')
-  soil.addColorStop(1, '#2c1d12')
-  ctx.fillStyle = soil
-  ctx.fillRect(layout.ox, layout.oy, layout.gridW, layout.gridH)
-
-  ctx.fillStyle = 'rgba(78,56,34,0.35)'
-  for (let i = 0; i < 18; i++) {
-    const x = layout.ox + hash01(world.seed + i) * layout.gridW
-    const y = layout.oy + hash01(world.seed + i * 3) * layout.gridH
-    noisyBlob(ctx, x, y, layout.cellW * (1.2 + hash01(i) * 2), layout.cellH * (0.8 + hash01(i * 2) * 1.4), world.seed + i, 7)
-    ctx.fill()
-  }
-
-  ctx.strokeStyle = 'rgba(201,144,82,0.22)'
-  ctx.lineWidth = 1
-  for (let r = 0; r < ROWS; r++) {
-    let run = 0
-    for (let c = 0; c <= COLS; c++) {
-      const isField = c < COLS && world.terrain[r * COLS + c] === TERRAIN.field
-      if (isField) run++
-      if ((!isField || c === COLS) && run > 1) {
-        const start = c - run
-        const a = cellRect(layout, start, r)
-        const b = cellRect(layout, c - 1, r)
-        ctx.beginPath()
-        const y = a.y + a.h * (0.35 + hash01(r * 8) * 0.3)
-        ctx.moveTo(a.x + 2, y)
-        ctx.quadraticCurveTo((a.x + b.x + b.w) / 2, y + Math.sin(r) * 3, b.x + b.w - 2, y + 2)
-        ctx.stroke()
-        run = 0
-      }
-      if (!isField) run = 0
+function chaikin(pts: Point[], rounds = 2): Point[] {
+  let cur = pts
+  for (let r = 0; r < rounds; r++) {
+    if (cur.length < 3) break
+    const next: Point[] = [cur[0]!]
+    for (let i = 0; i < cur.length - 1; i++) {
+      const a = cur[i]!
+      const b = cur[i + 1]!
+      next.push({ x: a.x * 0.75 + b.x * 0.25, y: a.y * 0.75 + b.y * 0.25 })
+      next.push({ x: a.x * 0.25 + b.x * 0.75, y: a.y * 0.25 + b.y * 0.75 })
     }
+    next.push(cur[cur.length - 1]!)
+    cur = next
   }
-
-  const regions = regionsOf(world)
-  for (const region of regions) {
-    if (region.kind === TERRAIN.water) drawPond(ctx, layout, region.cells, t, world.seed)
-    if (region.kind === TERRAIN.monte) drawCanopy(ctx, layout, region.cells, world.seed)
-  }
-
-  drawRoads(ctx, layout, world)
-  ctx.restore()
-
-  ctx.strokeStyle = 'rgba(13,18,16,0.55)'
-  ctx.lineWidth = 3
-  predioEdge(ctx, layout, world.seed)
-  ctx.stroke()
+  return cur
 }
 
-function drawRoads(ctx: CanvasRenderingContext2D, layout: GridLayout, world: World) {
-  const pts: Point[] = []
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      if (world.terrain[r * COLS + c] !== TERRAIN.path) continue
-      pts.push({ x: layout.ox + (c + 0.5) * layout.cellW, y: layout.oy + (r + 0.5) * layout.cellH })
-    }
-  }
-  if (pts.length < 2) return
-  ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
-  ctx.strokeStyle = '#6d4526'
-  ctx.lineWidth = Math.max(10, layout.cell * 0.72)
-  strokeNearest(ctx, pts)
-  ctx.strokeStyle = TIERRA
-  ctx.lineWidth = Math.max(7, layout.cell * 0.52)
-  strokeNearest(ctx, pts)
-  ctx.strokeStyle = `${TIERRA2}66`
-  ctx.lineWidth = 1.4
-  strokeNearest(ctx, pts)
-}
-
-function strokeNearest(ctx: CanvasRenderingContext2D, pts: Point[]) {
-  const used = new Set<number>()
+function orderNearest(pts: Point[]): Point[] {
+  if (pts.length < 2) return pts
+  const used = new Set<number>([0])
+  const out: Point[] = [pts[0]!]
   let cur = 0
-  used.add(0)
-  ctx.beginPath()
-  ctx.moveTo(pts[0]!.x, pts[0]!.y)
   while (used.size < pts.length) {
     let best = -1
     let bestD = 1e9
@@ -374,10 +285,180 @@ function strokeNearest(ctx: CanvasRenderingContext2D, pts: Point[]) {
     }
     if (best < 0) break
     used.add(best)
-    ctx.lineTo(pts[best]!.x, pts[best]!.y)
+    out.push(pts[best]!)
     cur = best
   }
+  return out
+}
+
+function strokePoly(ctx: CanvasRenderingContext2D, pts: Point[]) {
+  if (pts.length < 2) return
+  ctx.beginPath()
+  ctx.moveTo(pts[0]!.x, pts[0]!.y)
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y)
   ctx.stroke()
+}
+
+function offsetPoly(pts: Point[], dist: number): Point[] {
+  return pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)]!
+    const b = pts[Math.min(pts.length - 1, i + 1)]!
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len = Math.hypot(dx, dy) || 1
+    return { x: p.x - (dy / len) * dist, y: p.y + (dx / len) * dist }
+  })
+}
+
+function fillEllipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number, ry: number) {
+  ctx.beginPath()
+  ctx.ellipse(x, y, Math.max(1.1, rx), Math.max(1.1, ry), 0, 0, Math.PI * 2)
+  ctx.fill()
+}
+
+function drawTerrain(ctx: CanvasRenderingContext2D, w: number, h: number, layout: GridLayout, world: World, now: number, reduced: boolean) {
+  const t = clock(now, reduced)
+  const soilTop = Math.max(0, layout.oy - 18)
+  const soil = ctx.createLinearGradient(0, soilTop, 0, h)
+  soil.addColorStop(0, '#5a3e28')
+  soil.addColorStop(0.32, '#3f2b1a')
+  soil.addColorStop(1, '#24180f')
+  ctx.fillStyle = soil
+  ctx.fillRect(0, soilTop, w, h - soilTop)
+
+  ctx.fillStyle = 'rgba(90,62,38,0.22)'
+  for (let i = 0; i < 16; i++) {
+    const x = hash01(world.seed + i * 1.3) * w
+    const y = soilTop + hash01(world.seed + i * 4.1) * (h - soilTop)
+    fillEllipse(ctx, x, y, 34 + hash01(i) * 48, 10 + hash01(i * 2) * 16)
+  }
+
+  ctx.strokeStyle = 'rgba(201,144,82,0.22)'
+  ctx.lineWidth = 1.2
+  ctx.lineCap = 'round'
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (world.terrain[r * COLS + c] !== TERRAIN.field) continue
+      if (hash01(world.seed + r * 17 + c) < 0.28) continue
+      const a = cellRect(layout, c, r)
+      const y = a.y + a.h * (0.28 + hash01(r * 9 + c) * 0.5)
+      ctx.beginPath()
+      ctx.moveTo(a.x + 1, y)
+      ctx.quadraticCurveTo(a.x + a.w * 0.5, y + (hash01(c * 3 + r) - 0.5) * 5, a.x + a.w - 1, y + 1)
+      ctx.stroke()
+    }
+  }
+
+  const regions = regionsOf(world)
+  drawScrub(ctx, layout, world)
+  for (const region of regions) {
+    if (region.kind === TERRAIN.water) drawPond(ctx, layout, region.cells, t, world.seed)
+  }
+  drawRoads(ctx, layout, world)
+  drawMonte(ctx, layout, world)
+}
+
+function drawRoads(ctx: CanvasRenderingContext2D, layout: GridLayout, world: World) {
+  const raw: Point[] = []
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (world.terrain[r * COLS + c] !== TERRAIN.path) continue
+      raw.push({
+        x: layout.ox + (c + 0.5) * layout.cellW,
+        y: layout.oy + (r + 0.5) * layout.cellH,
+      })
+    }
+  }
+  if (raw.length < 2) return
+  const pts = chaikin(orderNearest(raw), 2)
+  const width = Math.max(11, layout.cell * 0.78)
+  ctx.lineJoin = 'round'
+  ctx.lineCap = 'round'
+  ctx.strokeStyle = '#4a2e18'
+  ctx.lineWidth = width + 3
+  strokePoly(ctx, pts)
+  ctx.strokeStyle = TIERRA
+  ctx.lineWidth = width
+  strokePoly(ctx, pts)
+  ctx.strokeStyle = '#c9905288'
+  ctx.lineWidth = Math.max(2, width * 0.22)
+  strokePoly(ctx, pts)
+  ctx.strokeStyle = 'rgba(42,26,14,0.45)'
+  ctx.lineWidth = 1.4
+  strokePoly(ctx, offsetPoly(pts, width * 0.22))
+  strokePoly(ctx, offsetPoly(pts, -width * 0.22))
+}
+
+function drawScrub(ctx: CanvasRenderingContext2D, layout: GridLayout, world: World) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (world.terrain[r * COLS + c] !== TERRAIN.monte) continue
+      const cell = cellRect(layout, c, r)
+      const n = hash01(world.seed + c * 13 + r * 29)
+      ctx.fillStyle = n > 0.55 ? '#1c2a1a' : '#243422'
+      fillEllipse(
+        ctx,
+        cell.x + cell.w * (0.3 + n * 0.4),
+        cell.y + cell.h * (0.55 + hash01(c + r) * 0.3),
+        cell.w * (0.28 + n * 0.22),
+        cell.h * (0.16 + n * 0.12),
+      )
+    }
+  }
+}
+
+function drawMonte(ctx: CanvasRenderingContext2D, layout: GridLayout, world: World) {
+  const plants: { x: number; y: number; s: number; seed: number; kind: 'tree' | 'bush' }[] = []
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (world.terrain[r * COLS + c] !== TERRAIN.monte) continue
+      const n = hash01(world.seed * 0.17 + c * 19 + r * 41)
+      if (n < 0.62) continue
+      const cell = cellRect(layout, c, r)
+      plants.push({
+        x: cell.x + cell.w * (0.28 + hash01(c * 7 + r) * 0.44),
+        y: cell.y + cell.h * (0.62 + hash01(c * 11 + r * 3) * 0.28),
+        s: layout.cell * (n > 0.86 ? 1.15 + n * 0.35 : 0.55 + n * 0.35),
+        seed: world.seed + c * 31 + r * 17,
+        kind: n > 0.86 ? 'tree' : 'bush',
+      })
+    }
+  }
+  plants.sort((a, b) => a.y - b.y)
+  for (const plant of plants) drawTree(ctx, plant.x, plant.y, plant.s, plant.seed, plant.kind)
+}
+
+function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, s: number, seed: number, kind: 'tree' | 'bush' = 'tree') {
+  const lean = (hash01(seed) - 0.5) * (kind === 'tree' ? 0.28 : 0.12)
+  if (kind === 'tree') {
+    const trunkH = s * (0.62 + hash01(seed + 1) * 0.28)
+    const trunkW = Math.max(2.4, s * 0.1)
+    ctx.fillStyle = '#4a3220'
+    ctx.beginPath()
+    ctx.moveTo(x - trunkW, y)
+    ctx.lineTo(x + trunkW, y)
+    ctx.lineTo(x + trunkW * 0.4 + lean * s, y - trunkH)
+    ctx.lineTo(x - trunkW * 0.4 + lean * s, y - trunkH)
+    ctx.closePath()
+    ctx.fill()
+    const crownY = y - trunkH * 0.88
+    const crownX = x + lean * s * 0.5
+    ctx.fillStyle = '#1a2c1c'
+    fillEllipse(ctx, crownX, crownY + 2, s * 0.72, s * 0.48)
+    ctx.fillStyle = hash01(seed + 3) > 0.5 ? MONTE : '#2f4a30'
+    fillEllipse(ctx, crownX - s * 0.22, crownY - s * 0.08, s * 0.42, s * 0.34)
+    ctx.fillStyle = MONTE2
+    fillEllipse(ctx, crownX + s * 0.2, crownY - s * 0.04, s * 0.38, s * 0.3)
+    ctx.fillStyle = '#4a6a3a'
+    fillEllipse(ctx, crownX, crownY - s * 0.22, s * 0.34, s * 0.26)
+    return
+  }
+  ctx.fillStyle = '#1e2c1c'
+  fillEllipse(ctx, x, y, s * 0.42, s * 0.22)
+  ctx.fillStyle = hash01(seed) > 0.5 ? MONTE : MONTE2
+  fillEllipse(ctx, x + lean * s, y - s * 0.18, s * 0.36, s * 0.24)
+  ctx.fillStyle = '#3a522e'
+  fillEllipse(ctx, x - s * 0.16, y - s * 0.1, s * 0.22, s * 0.16)
 }
 
 function drawPond(ctx: CanvasRenderingContext2D, layout: GridLayout, cells: Cell[], now: number, seed: number) {
@@ -391,103 +472,93 @@ function drawPond(ctx: CanvasRenderingContext2D, layout: GridLayout, cells: Cell
   }
   const cx = sx / cells.length
   const cy = sy / cells.length
-  const rx = Math.max(layout.cellW * 1.6, Math.sqrt(cells.length) * layout.cellW * 0.7)
-  const ry = Math.max(layout.cellH * 1.1, Math.sqrt(cells.length) * layout.cellH * 0.55)
+  const rx = Math.max(layout.cellW * 1.7, Math.sqrt(cells.length) * layout.cellW * 0.72)
+  const ry = Math.max(layout.cellH * 1.15, Math.sqrt(cells.length) * layout.cellH * 0.5)
+  ctx.fillStyle = '#3a2a1c'
+  noisyBlob(ctx, cx, cy + 3, rx * 1.08, ry * 1.08, seed + 3, 11)
+  ctx.fill()
   const g = ctx.createLinearGradient(cx, cy - ry, cx, cy + ry)
-  g.addColorStop(0, '#3d6a74')
-  g.addColorStop(0.45, '#24505c')
-  g.addColorStop(1, '#16343c')
+  g.addColorStop(0, '#4a7a82')
+  g.addColorStop(0.35, '#245860')
+  g.addColorStop(1, '#132e34')
   ctx.fillStyle = g
-  noisyBlob(ctx, cx, cy, rx, ry, seed + 9, 12)
+  noisyBlob(ctx, cx, cy, rx, ry, seed + 9, 11)
   ctx.fill()
   ctx.save()
-  noisyBlob(ctx, cx, cy, rx, ry, seed + 9, 12)
+  noisyBlob(ctx, cx, cy, rx, ry, seed + 9, 11)
   ctx.clip()
-  ctx.fillStyle = `rgba(244,231,207,${0.08 + 0.04 * Math.sin(now / 700)})`
-  ctx.fillRect(cx - rx, cy - ry * 0.6, rx * 2, ry * 0.5)
-  ctx.strokeStyle = 'rgba(180,220,230,0.28)'
-  ctx.lineWidth = 1.2
+  ctx.fillStyle = `rgba(244,231,207,${0.12 + 0.05 * Math.sin(now / 680)})`
+  ctx.fillRect(cx - rx, cy - ry * 0.72, rx * 2, ry * 0.42)
+  ctx.strokeStyle = 'rgba(180,220,230,0.22)'
+  ctx.lineWidth = 1
   for (let i = 0; i < 3; i++) {
     ctx.beginPath()
-    const y = cy - 4 + i * 7 + Math.sin(now / 320 + i) * 2
-    ctx.moveTo(cx - rx * 0.7, y)
-    ctx.quadraticCurveTo(cx, y + 3, cx + rx * 0.7, y)
+    const y = cy - 6 + i * 8 + Math.sin(now / 340 + i) * 1.8
+    ctx.moveTo(cx - rx * 0.62, y)
+    ctx.quadraticCurveTo(cx, y + 4, cx + rx * 0.62, y)
     ctx.stroke()
   }
   ctx.restore()
-  ctx.strokeStyle = 'rgba(201,144,82,0.35)'
+  ctx.strokeStyle = '#5a3a22'
   ctx.lineWidth = 2
-  noisyBlob(ctx, cx, cy, rx, ry, seed + 9, 12)
-  ctx.stroke()
-}
-
-function drawCanopy(ctx: CanvasRenderingContext2D, layout: GridLayout, cells: Cell[], seed: number) {
-  if (!cells.length) return
-  let sx = 0
-  let sy = 0
-  for (const cell of cells) {
-    const p = cellRect(layout, cell.c, cell.r)
-    sx += p.x + p.w / 2
-    sy += p.y + p.h / 2
-  }
-  const cx = sx / cells.length
-  const cy = sy / cells.length
-  const rx = Math.max(layout.cellW * 1.4, Math.sqrt(cells.length) * layout.cellW * 0.62)
-  const ry = Math.max(layout.cellH * 1.1, Math.sqrt(cells.length) * layout.cellH * 0.52)
-  ctx.fillStyle = '#172318'
-  noisyBlob(ctx, cx, cy, rx, ry, seed + cells.length, 10)
-  ctx.fill()
-  const count = Math.max(2, Math.ceil(cells.length / 2.8))
-  for (let i = 0; i < count; i++) {
-    const cell = cells[Math.floor(hash01(seed + i * 11) * cells.length)]!
-    const { x, y, w, h } = cellRect(layout, cell.c, cell.r)
-    const bx = x + w * (0.3 + hash01(seed + i) * 0.4)
-    const by = y + h * (0.35 + hash01(seed + i * 2) * 0.35)
-    const brx = w * (0.95 + hash01(seed + i * 3) * 1.1)
-    const bry = h * (0.8 + hash01(seed + i * 5) * 0.85)
-    ctx.fillStyle = hash01(seed + i * 7) > 0.45 ? MONTE : '#1e3224'
-    noisyBlob(ctx, bx, by, brx, bry, seed + i * 13, 8 + (i % 4))
-    ctx.fill()
-    ctx.fillStyle = `${MONTE2}aa`
-    noisyBlob(ctx, bx - brx * 0.18, by - bry * 0.22, brx * 0.42, bry * 0.34, seed + i * 17, 7)
-    ctx.fill()
+  ctx.lineCap = 'round'
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI + 0.4
+    const bx = cx + Math.cos(a) * rx * 0.92
+    const by = cy + Math.sin(a) * ry * 0.7
+    ctx.beginPath()
+    ctx.moveTo(bx, by)
+    ctx.lineTo(bx + (hash01(seed + i) - 0.5) * 6, by - 10 - hash01(seed + i * 2) * 8)
+    ctx.stroke()
   }
 }
 
 function drawHouse(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
   ctx.fillStyle = '#2a1c12'
-  ctx.fillRect(x - s * 0.48, y + s * 0.18, s * 0.96, s * 0.12)
-  ctx.fillStyle = CREMA
-  ctx.fillRect(x - s * 0.32, y - s * 0.06, s * 0.64, s * 0.4)
+  ctx.fillRect(x - s * 0.55, y + s * 0.22, s * 1.1, s * 0.1)
+  ctx.fillStyle = '#e8d4b0'
+  ctx.fillRect(x - s * 0.36, y - s * 0.02, s * 0.72, s * 0.42)
   ctx.fillStyle = '#6b3f22'
   ctx.beginPath()
-  ctx.moveTo(x - s * 0.42, y - s * 0.06)
-  ctx.lineTo(x, y - s * 0.52)
-  ctx.lineTo(x + s * 0.42, y - s * 0.06)
+  ctx.moveTo(x - s * 0.48, y)
+  ctx.lineTo(x, y - s * 0.55)
+  ctx.lineTo(x + s * 0.48, y)
   ctx.closePath()
   ctx.fill()
+  ctx.strokeStyle = '#3a2414'
+  ctx.lineWidth = Math.max(1.2, s * 0.04)
+  ctx.stroke()
   ctx.fillStyle = '#1a120c'
-  ctx.fillRect(x - s * 0.06, y + s * 0.08, s * 0.14, s * 0.26)
-  ctx.fillStyle = `${BRASA2}99`
-  ctx.fillRect(x + s * 0.12, y + s * 0.02, s * 0.12, s * 0.1)
+  ctx.fillRect(x - s * 0.08, y + s * 0.12, s * 0.16, s * 0.28)
+  ctx.fillStyle = `${BRASA2}aa`
+  ctx.fillRect(x + s * 0.12, y + s * 0.06, s * 0.14, s * 0.12)
+  ctx.fillStyle = '#4a3424'
+  ctx.fillRect(x + s * 0.38, y + s * 0.02, s * 0.12, s * 0.38)
 }
 
 function drawCorral(ctx: CanvasRenderingContext2D, x: number, y: number, s: number) {
+  const w = s * 1.05
+  const h = s * 0.72
   ctx.strokeStyle = TIERRA2
-  ctx.lineWidth = Math.max(2, s * 0.07)
-  const w = s * 0.9
-  const h = s * 0.7
-  ctx.strokeRect(x - w / 2, y - h / 2, w, h)
-  ctx.beginPath()
-  ctx.moveTo(x - w / 2, y - h * 0.12)
-  ctx.lineTo(x + w / 2, y - h * 0.12)
-  ctx.moveTo(x - w / 2, y + h * 0.18)
-  ctx.lineTo(x + w / 2, y + h * 0.18)
-  ctx.stroke()
-  ctx.fillStyle = '#3a2a1c'
-  for (let i = 0; i < 4; i++) {
-    ctx.fillRect(x - w / 2 + (i * w) / 3 - s * 0.04, y - h / 2 - s * 0.04, s * 0.08, h + s * 0.08)
+  ctx.lineWidth = Math.max(2, s * 0.06)
+  ctx.lineCap = 'round'
+  for (let i = 0; i < 5; i++) {
+    const px = x - w / 2 + (i * w) / 4
+    ctx.beginPath()
+    ctx.moveTo(px, y - h / 2)
+    ctx.lineTo(px, y + h / 2)
+    ctx.stroke()
   }
+  ctx.strokeStyle = '#c99052'
+  ctx.lineWidth = Math.max(1.6, s * 0.05)
+  for (const k of [-0.28, 0, 0.28]) {
+    ctx.beginPath()
+    ctx.moveTo(x - w / 2, y + h * k)
+    ctx.lineTo(x + w / 2, y + h * k)
+    ctx.stroke()
+  }
+  ctx.fillStyle = '#3a2a1c'
+  ctx.fillRect(x - s * 0.22, y + h * 0.18, s * 0.44, s * 0.12)
 }
 
 function drawAsset(ctx: CanvasRenderingContext2D, layout: GridLayout, inc: Incident, now: number, live: boolean, reduced: boolean) {
@@ -498,14 +569,20 @@ function drawAsset(ctx: CanvasRenderingContext2D, layout: GridLayout, inc: Incid
   ctx.save()
   ctx.translate(cx, cy)
   ctx.scale(pulse, pulse)
-  if (inc.kind === 'house') drawHouse(ctx, 0, 0, s * 1.15)
+  if (inc.kind === 'house') drawHouse(ctx, 0, 0, s * 1.65)
   else if (inc.kind === 'water') {
-    /* pond already drawn; pump shed */
     ctx.fillStyle = CREMA
-    ctx.fillRect(-s * 0.16, -s * 0.22, s * 0.32, s * 0.28)
+    ctx.fillRect(-s * 0.2, -s * 0.28, s * 0.4, s * 0.34)
     ctx.fillStyle = '#2a5560'
-    ctx.fillRect(-s * 0.08, s * 0.02, s * 0.16, s * 0.18)
-  } else drawCorral(ctx, 0, 0, s * 1.2)
+    ctx.beginPath()
+    ctx.moveTo(-s * 0.24, -s * 0.28)
+    ctx.lineTo(0, -s * 0.5)
+    ctx.lineTo(s * 0.24, -s * 0.28)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = '#1a3340'
+    ctx.fillRect(-s * 0.09, s * 0.02, s * 0.18, s * 0.2)
+  } else drawCorral(ctx, 0, 0, s * 1.55)
   ctx.restore()
 }
 
@@ -560,17 +637,30 @@ function drawFire(
     const cy = y + h / 2
 
     if (t >= inc.appearMs) {
+      const burn: Point[] = []
       for (let r = inc.focus.r - inc.radius - 1; r <= inc.focus.r + inc.radius + 1; r++) {
         for (let c = inc.focus.c - inc.radius - 1; c <= inc.focus.c + inc.radius + 1; c++) {
           if (c < 0 || r < 0 || c >= COLS || r >= ROWS) continue
           if (saved.has(`${c},${r}`)) continue
           if (fireTimeMs(inc, { c, r }) > t) continue
           const cell = cellRect(layout, c, r)
-          const u = live ? 0.5 + 0.2 * Math.sin(clockNow / 90 + c) : 0.38
-          ctx.fillStyle = `rgba(255,90,54,${u})`
-          noisyBlob(ctx, cell.x + cell.w / 2, cell.y + cell.h / 2, cell.w * 0.48, cell.h * 0.46, c * 9 + r, 6)
-          ctx.fill()
+          burn.push({ x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 })
         }
+      }
+      if (burn.length) {
+        let ax = 0
+        let ay = 0
+        for (const p of burn) {
+          ax += p.x
+          ay += p.y
+        }
+        ax /= burn.length
+        ay /= burn.length
+        const spread = Math.sqrt(burn.length) * layout.cell * 0.55
+        ctx.fillStyle = live ? 'rgba(255,90,54,0.38)' : 'rgba(180,70,40,0.28)'
+        fillEllipse(ctx, ax, ay, spread * 1.2, spread * 0.82)
+        ctx.fillStyle = live ? 'rgba(255,159,28,0.48)' : 'rgba(200,90,40,0.24)'
+        fillEllipse(ctx, ax, ay - spread * 0.14, spread * 0.72, spread * 0.48)
       }
     }
 
@@ -680,6 +770,20 @@ function drawEtaCapsule(ctx: CanvasRenderingContext2D, layout: GridLayout, strok
   ctx.fillText(label, p.x, by + bh / 2)
 }
 
+function drawForeground(ctx: CanvasRenderingContext2D, w: number, h: number, layout: GridLayout, seed: number) {
+  const y0 = layout.oy + layout.gridH - 22
+  const g = ctx.createLinearGradient(0, y0, 0, h)
+  g.addColorStop(0, 'rgba(13,18,16,0)')
+  g.addColorStop(1, 'rgba(10,14,12,0.38)')
+  ctx.fillStyle = g
+  ctx.fillRect(0, y0, w, h - y0)
+  ctx.fillStyle = '#1a2416'
+  for (let i = 0; i < 9; i++) {
+    const x = (i / 8) * w + (hash01(seed + i) - 0.5) * 18
+    fillEllipse(ctx, x, h - 10, 18 + hash01(seed + i * 3) * 22, 7 + hash01(seed + i * 5) * 6)
+  }
+}
+
 export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, opts: DrawOpts) {
   const { layout, world } = opts
   const shake = opts.reduced ? 0 : Math.min(2.2, opts.shake)
@@ -693,7 +797,7 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
     return
   }
 
-  drawTerrain(ctx, layout, world, opts.now, opts.reduced)
+  drawTerrain(ctx, w, h, layout, world, opts.now, opts.reduced)
 
   const savedKey = new Set(opts.saved.map((cell) => `${cell.c},${cell.r}`))
   const active = opts.phase === 'play' ? incidentAt(opts.t, world) : world.incidents[0] ?? null
@@ -729,12 +833,27 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
     ctx.fill()
   }
 
-  for (const cell of opts.saved) {
-    const age = opts.now - cell.born - cell.delay
-    if (age < 0) continue
-    const { x, y, w: cw, h: ch } = cellRect(layout, cell.c, cell.r)
-    ctx.fillStyle = `${AURA}55`
-    ctx.fillRect(x, y, cw, ch)
+  if (opts.saved.length) {
+    let ax = 0
+    let ay = 0
+    let n = 0
+    for (const cell of opts.saved) {
+      const age = opts.now - cell.born - cell.delay
+      if (age < 0) continue
+      const { x, y, w: cw, h: ch } = cellRect(layout, cell.c, cell.r)
+      ax += x + cw / 2
+      ay += y + ch / 2
+      n++
+    }
+    if (n) {
+      const wash = ctx.createRadialGradient(ax / n, ay / n, 8, ax / n, ay / n, layout.cell * 3.4)
+      wash.addColorStop(0, `${AURA}55`)
+      wash.addColorStop(1, 'rgba(25,195,125,0)')
+      ctx.fillStyle = wash
+      ctx.beginPath()
+      ctx.arc(ax / n, ay / n, layout.cell * 3.4, 0, Math.PI * 2)
+      ctx.fill()
+    }
   }
 
   const readyGuide =
@@ -828,6 +947,8 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
     ctx.fillText(f.text, f.x, f.y - u * 28)
   }
   ctx.globalAlpha = 1
+
+  drawForeground(ctx, w, h, layout, world.seed)
 
   if (opts.flash > 0.04) {
     ctx.fillStyle =

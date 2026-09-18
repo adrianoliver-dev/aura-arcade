@@ -11,6 +11,7 @@ import {
   astar,
   createWorld,
   firstGuidePath,
+  guidePath,
   incidentAt,
   isClutch,
   isGuiding,
@@ -220,7 +221,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
         const px = worldToPx(layout, p)
         return { x: rect.left + px.x, y: rect.top + px.y }
       }
-      const cells = inc.id === 0 ? firstGuidePath(world) : [inc.node, inc.focus]
+      const cells = guidePath(world, inc)
       const path = cells.map((cell) => toCss(normOfCell(cell)))
       return {
         from: toCss(normOfCell(inc.node)),
@@ -466,9 +467,9 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
 
   useEffect(() => {
     if (!shot || phase !== 'ready' || shotOnceRef.current) return
-    shotOnceRef.current = true
     const world = worldRef.current
     if (!world) return
+    shotOnceRef.current = true
     if (shot === 'ready' || shot === 'attract') return
     const path = firstGuidePath(world).map(normOfCell)
     const inc0 = world.incidents[0]!
@@ -879,7 +880,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
 
   const rematch = () => {
     bumpRematch()
-    void startRun()
+    void startRun().then(() => beginPlay())
   }
 
   const seconds = Math.ceil(hud.left / 1000)
@@ -905,7 +906,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
         <button
           type="button"
           aria-label={muted ? humoCopy.mute : humoCopy.sound}
-          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#F4E7CF]/80 bg-[#0D1210]/70 text-[#F4E7CF]"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#F4E7CF]/80 bg-[#0D1210]/55 text-[#F4E7CF]"
           onClick={() => setPulsoMuted(!muted)}
         >
           {muted ? (
@@ -922,29 +923,31 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
         </button>
       </header>
 
-      <p className="pointer-events-none absolute bottom-[max(5.8rem,env(safe-area-inset-bottom))] left-3 right-3 z-10 text-center font-display text-2xl text-[#F4E7CF] drop-shadow-[0_2px_8px_rgba(0,0,0,0.65)]">
-        {phase === 'play' ? hud.line : phase === 'ready' ? humoCopy.hint : phase === 'boot' ? 'Cargando predio' : ''}
-        {offline && phase !== 'end' ? ` · ${humoCopy.offline}` : ''}
-      </p>
-
-      {phase === 'ready' && (
-        <div className="absolute inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 flex items-end justify-between gap-3 px-3">
-          <img
-            src="/qr-arcade.png"
-            alt={humoCopy.standQr}
-            width={72}
-            height={72}
-            className={demo ? 'hidden' : 'hidden rounded-md bg-[#F4E7CF] p-1 md:block'}
-          />
-          <button
-            type="button"
-            onClick={beginPlay}
-            className="min-h-14 flex-1 rounded-full bg-[#19C37D] px-6 font-display text-2xl tracking-wide text-[#0D1210]"
-          >
-            {humoCopy.cta}
-          </button>
+      {phase !== 'end' ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0D1210]/75 via-[#0D1210]/20 to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10">
+          <p className="text-center font-display text-2xl text-[#F4E7CF] drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
+            {phase === 'play' ? hud.line : phase === 'ready' ? humoCopy.hint : phase === 'boot' ? 'Cargando predio' : ''}
+          </p>
+          {phase === 'ready' ? (
+            <div className="pointer-events-auto mt-3 flex items-end justify-between gap-3">
+              <img
+                src="/qr-arcade.png"
+                alt={humoCopy.standQr}
+                width={72}
+                height={72}
+                className={demo ? 'hidden' : 'hidden rounded-md bg-[#F4E7CF] p-1 md:block'}
+              />
+              <button
+                type="button"
+                onClick={beginPlay}
+                className="min-h-14 flex-1 rounded-full bg-[#19C37D] px-6 font-display text-2xl tracking-wide text-[#0D1210] shadow-[0_10px_24px_rgba(25,195,125,0.28)]"
+              >
+                {humoCopy.cta}
+              </button>
+            </div>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {phase === 'end' && result && (
         <HumoEndScreen

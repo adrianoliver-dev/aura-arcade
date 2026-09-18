@@ -19,8 +19,8 @@ export const FREEZE_MS = MATCH_MS
 export const TICK_MS = 16
 export const FOCO_N = 3
 export const TRAVEL_MS_PER_CELL = 180
-export const SNAP_START_CELLS = 2.4
-export const SNAP_END_CELLS = 2.05
+export const SNAP_START_CELLS = 2.75
+export const SNAP_END_CELLS = 2.2
 export const REMATCH_KEEP_SEED = 3
 export const TARGET_MIN_PX = 48
 export const TZ = 'America/La_Paz'
@@ -450,9 +450,12 @@ export function isClutch(t: number, inc: Incident | null): boolean {
   return inc.id === FOCO_N - 1 && t >= inc.appearMs && t < inc.commitMs
 }
 
+export function guidePath(world: World, incident: Incident): Cell[] {
+  return astar(world, world.node, incident.focus) ?? bresenham(world.node, incident.focus)
+}
+
 export function firstGuidePath(world: World): Cell[] {
-  const focus = world.incidents[0]!.focus
-  return astar(world, world.node, focus) ?? bresenham(world.node, focus)
+  return guidePath(world, world.incidents[0]!)
 }
 
 export function travelMsForCells(world: World, cells: Cell[]): number {

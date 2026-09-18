@@ -57,7 +57,7 @@ async function followGuide(page) {
   }
 }
 
-async function recordClip({ name, url, seconds, fps, prep, act }) {
+async function recordClip({ name, url, seconds, fps, prep, act, w = 390, h = 844 }) {
   const dir = path.join(tmpRoot, name)
   await rm(dir, { recursive: true, force: true })
   await mkdir(dir, { recursive: true })
@@ -67,7 +67,7 @@ async function recordClip({ name, url, seconds, fps, prep, act }) {
     args: ['--hide-scrollbars', '--autoplay-policy=no-user-gesture-required'],
   })
   const page = await browser.newPage()
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 })
+  await page.setViewport({ width: w, height: h, deviceScaleFactor: 1 })
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 })
   await page.waitForSelector('canvas', { timeout: 20000 })
   await waitPainted(page)
@@ -89,7 +89,9 @@ async function recordClip({ name, url, seconds, fps, prep, act }) {
   console.log('frames', name, total)
 }
 
-await recordClip({
+const only = process.argv[2]
+
+if (!only || only === 'clutch') await recordClip({
   name: 'aura-antes-del-humo-clutch-9x16',
   url: `${origin}/jugar`,
   seconds: 12,
@@ -107,21 +109,35 @@ await recordClip({
   },
 })
 
-await recordClip({
+if (!only || only === 'revancha') await recordClip({
   name: 'aura-antes-del-humo-revancha-9x16',
   url: `${origin}/jugar?shot=end-miss`,
   seconds: 12,
   fps: 10,
   prep: async (page) => {
     await page.waitForFunction(() => document.body.innerText.includes('OTRA RUTA'), { timeout: 15000 })
+    await page.evaluate(() => {
+      window.setTimeout(() => {
+        const btn = [...document.querySelectorAll('button')].find((b) => (b.textContent || '').includes('OTRA'))
+        btn?.click()
+      }, 1800)
+    })
   },
   act: async (page) => {
-    await sleep(1600)
-    await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => (b.textContent || '').includes('OTRA'))?.click())
-    await waitPainted(page)
-    await sleep(4500)
+    await sleep(7200)
     const g = await guide(page)
     if (g?.path?.length >= 2) await dragPath(page, g.path)
     else await page.keyboard.press('Enter')
   },
+})
+
+if (!only || only === 'loop') await recordClip({
+  name: 'aura-antes-del-humo-loop-16x9',
+  url: `${origin}/jugar?demo=1`,
+  seconds: 13,
+  fps: 8,
+  w: 1920,
+  h: 1080,
+  prep: async () => sleep(1800),
+  act: async () => {},
 })

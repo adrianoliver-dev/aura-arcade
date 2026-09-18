@@ -22,18 +22,20 @@ async function ffprobe(file) {
   return JSON.parse(stdout)
 }
 
-async function encode({ name, inputPattern, fps, overlayText, overlayStart, seconds, scale }) {
+async function encode({ name, inputPattern, fps, overlayText, overlayStart, overlayEnd, overlayY, seconds, scale }) {
   await mkdir(grabDir, { recursive: true })
   const textFile = path.join(grabDir, `${name}-overlay.txt`)
   await writeFile(textFile, overlayText, 'utf8')
   const out = path.join(outDir, `${name}.mp4`)
   const textPath = textFile.replaceAll('\\', '/')
+  const end = overlayEnd ?? seconds
+  const yExpr = overlayY || 'h-92'
   const vfCore = [
     scale,
     'format=yuv420p',
     'fade=t=in:st=0:d=0.3',
     `fade=t=out:st=${(seconds - 0.4).toFixed(2)}:d=0.35`,
-    `drawtext=fontfile=${font}:textfile=${textPath}:fontcolor=0xF4E7CF:fontsize=52:x=(w-text_w)/2:y=h-92:enable='gte(t,${overlayStart})'`,
+    `drawtext=fontfile=${font}:textfile=${textPath}:fontcolor=0xF4E7CF:fontsize=48:x=(w-text_w)/2:y=${yExpr}:enable='between(t,${overlayStart},${end})'`,
   ].join(',')
   await mkdir(outDir, { recursive: true })
   await exec('ffmpeg', [
@@ -85,10 +87,11 @@ const only = process.argv[2]
 if (!only || only === 'loop') {
   await encode({
     name: 'aura-antes-del-humo-loop-16x9',
-    inputPattern: path.join('.tmp-p2', 'frames', 'loop', 'loop-%04d.jpg'),
+    inputPattern: path.join('.tmp-p2', 'frames', 'aura-antes-del-humo-loop-16x9', 'f%04d.jpg'),
     fps: 8,
     overlayText: 'ESCANEÁ Y JUGÁ',
     overlayStart: 9,
+    overlayY: 'h-92',
     seconds: 13,
     scale: 'scale=1920:1080',
   })
@@ -100,7 +103,8 @@ if (!only || only === 'clutch') {
     inputPattern: path.join('.tmp-p2', 'frames', 'aura-antes-del-humo-clutch-9x16', 'f%04d.jpg'),
     fps: 10,
     overlayText: 'JUGÁ 40 S',
-    overlayStart: 8,
+    overlayStart: 9,
+    overlayY: '248',
     seconds: 12,
     scale: 'scale=1080:1920:flags=lanczos',
   })
@@ -113,6 +117,8 @@ if (!only || only === 'revancha') {
     fps: 10,
     overlayText: 'OTRA RUTA',
     overlayStart: 0.3,
+    overlayEnd: 3.2,
+    overlayY: '248',
     seconds: 12,
     scale: 'scale=1080:1920:flags=lanczos',
   })

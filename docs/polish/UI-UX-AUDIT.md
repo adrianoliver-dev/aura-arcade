@@ -4,7 +4,7 @@ Fuente: `ui-ux-pro-max-skill` (dominios `ux` y `typography`), 17 sep 2026. No es
 
 | Hallazgo (skill) | Decisión aplicada |
 | --- | --- |
-| Touch ≥48 CSS px (web/Android); 8px entre targets | Base y focos con imán ≥2 celdas; mute 48px; CTA `min-h-14`; gap 8px en end. |
+| Touch ≥48 CSS px (web/Android); 8px entre targets | Base y focos con imán 2.75 / 2.2 celdas; mute 48px; CTA `min-h-14`; gap 8px en end. |
 | Contraste 4.5:1, no icono mudo sin nombre | Crema `#F4E7CF` sobre noche; mute con `aria-label` y trazo visible, no solo color. |
 | Reduced motion | Partículas/shake/parallax se apagan; el snap y el color del ETA siguen. |
 | Excessive motion: 1–2 héroes | Glow reservado a base, ruta y brasa. Cielo mate. |

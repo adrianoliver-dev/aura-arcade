@@ -6,21 +6,21 @@
 
 - Viewport 390×844, `/jugar` **sin** `demo=1`.
 - Prep: tap `JUGÁ 40 S`, espera 4.5 s (ventana Casa).
-- Trazo: `window.__humoGuide()` (coords CSS de la ruta de casa) + arrastre Puppeteer. No es IA.
-- 120 JPEG @ 10 fps → scale lanczos 1080×1920.
+- Trazo humano vía `window.__humoGuide()` + arrastre Puppeteer.
+- 120 JPEG @ 10 fps → lanczos 1080×1920.
 
 ```
-node scripts/p2-capture-9x16.mjs
-ffmpeg -y -framerate 10 -i .tmp-p2/frames/aura-antes-del-humo-clutch-9x16/f%04d.jpg -loop 1 -t 12 -i public/qr-arcade.png -f lavfi -t 12 -i anullsrc=channel_layout=stereo:sample_rate=48000 ... scale=1080:1920 ... overlay QR + drawtext JUGÁ 40 S
+node scripts/p2-capture-9x16.mjs clutch
+node scripts/p2-encode-final.mjs clutch
 ```
 
-Beats: peligro/casa visible → trazo con ETA `LLEGA` → snap 42 ha → QR + CTA.
+Beats: 1 s de peligro → trazo → snap 45 ha → QR + `JUGÁ 40 S` arriba (no sobre la instrucción).
 
 ## Overlays / audio
 
 | Pieza | Origen |
 | --- | --- |
-| Texto `JUGÁ 40 S` | `docs/video/final/overlay-clutch.txt` |
+| Texto `JUGÁ 40 S` | `docs/video/final/aura-antes-del-humo-clutch-9x16-overlay.txt` |
 | QR | `public/qr-arcade.png` |
 | Audio | silencio AAC |
 
@@ -33,4 +33,4 @@ Beats: peligro/casa visible → trazo con ETA `LLEGA` → snap 42 ha → QR + CT
 
 `docs/video/final/aura-antes-del-humo-clutch-9x16/frame-{1,6,11}s.png`
 
-Revisión: HUD del producto, mute icon, sin chrome de Cursor. El QR del overlay tapa en parte la instrucción de t=11; el predio y el CTA siguen legibles.
+Revisión: HUD del producto, sin chrome. El overlay de texto vive bajo el QR, no tapa `Atajo o vuelta`.
