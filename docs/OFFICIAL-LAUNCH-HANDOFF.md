@@ -8,7 +8,7 @@ El despliegue puede hacerse como **candidato oficial** ahora. No debe anunciarse
 
 1. la URL canónica y el QR se probaron desde un teléfono fuera del equipo;
 2. el KV guarda un score, sobrevive una nueva instancia y muestra ese score en `/api/humo/leaderboard`;
-3. cinco personas nuevas completaron la primera acción en el teléfono objetivo;
+3. cinco personas nuevas completaron la primera acción en el teléfono objetivo y existe una bitácora de al menos 30 minutos de juego humano por cada reto;
 4. los MP4 P4 se capturaron de este build y pasaron su revisión audiovisual.
 
 Los archivos de `public/trailers/final/` son anteriores a P3 y no se deben poner en el monitor.

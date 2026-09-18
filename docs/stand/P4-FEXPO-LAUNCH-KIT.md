@@ -9,7 +9,7 @@ El stand mide 1×1 m: la pantalla atrae, el QR mueve el juego al teléfono y la 
 | Loop de monitor | MP4 1920×1080, 18 s | Los tres retos, reacción y QR final. | P4 aprobado. |
 | Afiche QR | A3 vertical, impresión mate | `¿LLEGÁS ANTES DEL HUMO?` / `ESCANEÁ · JUGÁ` / QR / dominio. | QR probado a 1.5 m. |
 | Tarjeta de mesa | A6 doble faz | Frente: reto + QR. Dorso: “¿campo, brigada o municipio?” + contacto aprobado. | Dominio/contacto aprobados. |
-| Atril/tablet | Vertical | Sala Aura lista, sin teclado/DevTools ni sleep. | Ensayo de 30 min. |
+| Atril/tablet | Vertical | Sala Aura lista, sin teclado/DevTools ni sleep. | 30 min humanos por reto + ensayo de 30 min. |
 | Presentación comercial | 16:9, 6 slides | Producto Aura real; el juego es la puerta, no una promesa técnica. | Claims revisados por Aura. |
 
 ## Copy para el afiche y la tarjeta
@@ -54,4 +54,4 @@ Usar fotos, dashboards y métricas propias aprobadas. Sin gráficos de IA con te
 5. Operación: cable de extensión, power bank, cinta, paño para pantalla, URL escrita y contacto en las tarjetas.
 6. Roles: una persona invita/juega; otra sostiene la conversación comercial y registra solo leads consentidos.
 
-La prueba humana y el material P4 son la última puerta: no se considera “listo para monitor” por tener un MP4 o una presentación exportada.
+La prueba humana de 30 minutos por cada reto y el material P4 son la última puerta: no se considera “listo para monitor” por tener un MP4 o una presentación exportada.
