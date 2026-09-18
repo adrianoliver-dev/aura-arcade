@@ -16,6 +16,7 @@ export async function POST(request: Request) {
       efficiency: result.efficiency,
       medal: result.medal,
       rankScore: result.rankScore,
+      headline: result.headline,
       arrived: result.savedByIncident.filter((row) => row.arrived).length,
     }
   })

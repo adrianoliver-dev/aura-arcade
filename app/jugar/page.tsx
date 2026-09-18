@@ -4,8 +4,8 @@ import { parseShareSeed } from '@/lib/humo/sim'
 export default async function JugarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ s?: string; demo?: string }>
+  searchParams: Promise<{ s?: string; demo?: string; rec?: string; shot?: string }>
 }) {
   const sp = await searchParams
-  return <HumoGame challengeSeed={parseShareSeed(sp.s)} demo={sp.demo === '1'} />
+  return <HumoGame challengeSeed={parseShareSeed(sp.s)} demo={sp.demo === '1'} rec={sp.rec ?? null} shot={sp.shot ?? null} />
 }

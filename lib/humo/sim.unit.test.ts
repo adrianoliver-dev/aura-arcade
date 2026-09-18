@@ -7,6 +7,7 @@ import {
   MATCH_MS,
   TARGET_MIN_PX,
   TELEGRAPH_MS,
+  WINDOWS,
   createWorld,
   corridorStroke,
   daySeed,
@@ -106,7 +107,21 @@ describe('ANTES DEL HUMO sim', () => {
   it('la partida dura 40s', () => {
     assert.equal(MATCH_MS, 40_000)
     assert.equal(FOCO_N, 3)
-    assert.equal(TELEGRAPH_MS, 2_000)
+    assert.equal(TELEGRAPH_MS, 4_000)
+  })
+
+  it('los tres pulsos siguen el brief P2', () => {
+    assert.deepEqual(WINDOWS, [
+      { appearMs: 4_000, commitMs: 14_000 },
+      { appearMs: 15_000, commitMs: 27_000 },
+      { appearMs: 28_000, commitMs: 40_000 },
+    ])
+  })
+
+  it('el resultado explica el porqué en una línea', () => {
+    const empty = simulateRun(3, [])
+    assert.ok(empty.headline.length > 8)
+    assert.ok(empty.headline.length < 80)
   })
 })
 

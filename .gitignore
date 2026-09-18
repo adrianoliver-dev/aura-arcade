@@ -1,12 +1,14 @@
 node_modules
 .next
+.next-p2build
 .data
 .env
 .env.*
 !.env.example
 *.log
 .DS_Store
-tsconfig.tsbuildinfo
+.tmp-p2
+
 .chrome-rec
 assets/fonts/*.ttf
 public/trailers/qa/

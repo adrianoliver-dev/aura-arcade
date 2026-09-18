@@ -6,13 +6,15 @@
 export const COLS = 12
 export const ROWS = 16
 
-export const TELEGRAPH_MS = 2_000
-export const GUIDE_MS = 4_000
-export const EASY_MS = 12_000
-export const BRANCH_MS = 13_000
-export const CLUTCH_MS = 9_000
+export const READ_MS = 4_000
+export const TELEGRAPH_MS = READ_MS
+export const GUIDE_MS = 1_000
+export const CASA_END_MS = 14_000
+export const WATER_START_MS = 15_000
+export const WATER_END_MS = 27_000
+export const CORRAL_START_MS = 28_000
 export const RESOLUTION_MS = 7_000
-export const MATCH_MS = TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS + CLUTCH_MS
+export const MATCH_MS = 40_000
 export const FREEZE_MS = MATCH_MS
 export const TICK_MS = 16
 export const FOCO_N = 3
@@ -78,6 +80,7 @@ export type IncidentResult = {
   cells: Cell[]
   late: boolean
   eta: EtaBand
+  quality: number
 }
 
 export type SimResult = {
@@ -85,13 +88,14 @@ export type SimResult = {
   efficiency: number
   rankScore: number
   medal: Medal
+  headline: string
   savedByIncident: IncidentResult[]
 }
 
 export const WINDOWS = [
-  { appearMs: TELEGRAPH_MS, commitMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS },
-  { appearMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS, commitMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS },
-  { appearMs: TELEGRAPH_MS + GUIDE_MS + EASY_MS + BRANCH_MS, commitMs: MATCH_MS },
+  { appearMs: READ_MS, commitMs: CASA_END_MS },
+  { appearMs: WATER_START_MS, commitMs: WATER_END_MS },
+  { appearMs: CORRAL_START_MS, commitMs: MATCH_MS },
 ] as const
 
 const KINDS: AssetKind[] = ['house', 'water', 'corral']
@@ -438,7 +442,7 @@ export function isTelegraph(t: number): boolean {
 }
 
 export function isGuiding(t: number): boolean {
-  return t >= TELEGRAPH_MS && t < TELEGRAPH_MS + GUIDE_MS
+  return t >= READ_MS - 1_000 && t < READ_MS
 }
 
 export function isClutch(t: number, inc: Incident | null): boolean {
@@ -530,14 +534,13 @@ export function rasterizeStroke(world: World, points: Point[]): Cell[] {
   return cells
 }
 
-export function strokeOnRoad(world: World, stroke: Stroke): boolean {
-  const cells = rasterizeStroke(world, stroke.points)
-  if (cells.length === 0) return false
+export function strokeOnRoad(world: World, cells: Cell[]): number {
+  if (cells.length === 0) return 0
   let path = 0
   for (const cell of cells) {
     if (world.terrain[idx(cell.c, cell.r)] === TERRAIN.path) path++
   }
-  return path / cells.length >= 0.45
+  return path / cells.length
 }
 
 function nearNode(world: World, pt: Point): boolean {
@@ -577,7 +580,7 @@ export function previewEta(world: World, incident: Incident, points: Point[], no
 }
 
 export function resolveIncident(world: World, incident: Incident, stroke: Stroke | null): IncidentResult {
-  const empty: IncidentResult = { id: incident.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red' }
+  const empty: IncidentResult = { id: incident.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red', quality: 0 }
   if (!stroke || stroke.points.length < 2) return empty
   const first = stroke.points[0]!
   const last = stroke.points[stroke.points.length - 1]!
@@ -601,7 +604,8 @@ export function resolveIncident(world: World, incident: Incident, stroke: Stroke
       savedCells.push(cell)
     }
   }
-  return { id: incident.id, arrived: savedCells.length > 0, saved: savedCells.length, cells: savedCells, late, eta }
+  const quality = strokeOnRoad(world, cells)
+  return { id: incident.id, arrived: savedCells.length > 0, saved: savedCells.length, cells: savedCells, late, eta, quality }
 }
 
 function medalFor(rows: IncidentResult[]): Medal {
@@ -612,17 +616,32 @@ function medalFor(rows: IncidentResult[]): Medal {
   return 'ALERTA'
 }
 
-export function scoreFromRows(rows: IncidentResult[]): Pick<SimResult, 'hectares' | 'efficiency' | 'rankScore' | 'medal'> {
+export function scoreFromRows(rows: IncidentResult[]): Pick<SimResult, 'hectares' | 'efficiency' | 'rankScore' | 'medal' | 'headline'> {
   const hectares = rows.reduce((sum, row) => sum + row.saved, 0)
   const arrived = rows.filter((row) => row.arrived).length
+  const qualityAvg = arrived > 0 ? rows.filter((row) => row.arrived).reduce((s, r) => s + r.quality, 0) / arrived : 0
   const cap = arrived * 14
   const efficiency = cap > 0 ? Math.min(100, Math.round((hectares / cap) * 100)) : 0
+  const earlyBonus = rows.reduce((s, r) => s + (r.arrived && !r.late ? 4 : 0) + (r.eta === 'green' ? 3 : 0), 0)
+  const qualityBonus = Math.round(qualityAvg * 12)
   return {
     hectares,
     efficiency,
-    rankScore: hectares * 1000 + efficiency,
+    rankScore: hectares * 1000 + efficiency * 10 + earlyBonus * 40 + qualityBonus,
     medal: medalFor(rows),
+    headline: whyLine(rows),
   }
+}
+
+function whyLine(rows: IncidentResult[]): string {
+  const arrived = rows.filter((r) => r.arrived)
+  const late = arrived.filter((r) => r.late)
+  if (arrived.length === 0) return 'El humo llegó primero. Quedó una ruta.'
+  if (arrived.length === 3 && late.length === 0) return 'Tres rutas a tiempo. El predio aguanta.'
+  if (arrived.length === 3) return 'Tres focos, uno justo. Se puede apretar.'
+  if (arrived.length === 2) return late.length ? 'Dos salvados, uno tarde. Hay margen.' : 'Dos a tiempo. El tercero espera.'
+  if (late.length) return 'Una ruta, tarde. La siguiente perdona.'
+  return 'Una a tiempo. El predio pide más.'
 }
 
 export function simulateRun(seed: number, strokes: Stroke[]): SimResult {
@@ -632,7 +651,7 @@ export function simulateRun(seed: number, strokes: Stroke[]): SimResult {
     const stroke = strokes.find((row) => row.incident === inc.id && !used.has(row.incident)) ?? null
     if (stroke) used.add(inc.id)
     if (stroke && (stroke.t1 < inc.appearMs || stroke.t0 >= inc.commitMs)) {
-      return { id: inc.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red' as const }
+      return { id: inc.id, arrived: false, saved: 0, cells: [], late: true, eta: 'red' as const, quality: 0 }
     }
     return resolveIncident(world, inc, stroke)
   })
