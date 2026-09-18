@@ -8,6 +8,7 @@ import {
   TARGET_MIN_PX,
   TELEGRAPH_MS,
   WINDOWS,
+  assetDeadlineMs,
   createWorld,
   corridorStroke,
   daySeed,
@@ -123,6 +124,14 @@ describe('ANTES DEL HUMO sim', () => {
       { appearMs: 15_000, commitMs: 27_000 },
       { appearMs: 28_000, commitMs: 40_000 },
     ])
+  })
+
+  it('el primer foco deja un margen FTUE visible y los otros no castigan antes de tiempo', () => {
+    const world = createWorld(2026)
+    const margins = world.incidents.map((inc) => assetDeadlineMs(inc) - inc.appearMs)
+    assert.ok(margins[0]! >= 12_000, `primer foco: ${margins[0]}ms`)
+    assert.ok(margins[1]! >= 9_800, `segundo foco: ${margins[1]}ms`)
+    assert.ok(margins[2]! >= 10_000, `tercer foco: ${margins[2]}ms`)
   })
 
   it('el resultado explica el porqué en una línea', () => {

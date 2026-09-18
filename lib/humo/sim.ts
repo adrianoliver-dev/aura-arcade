@@ -21,8 +21,11 @@ export const FREEZE_MS = MATCH_MS
 export const TICK_MS = 16
 export const FOCO_N = 3
 export const TRAVEL_MS_PER_CELL = 180
-export const SNAP_START_CELLS = 2.75
-export const SNAP_END_CELLS = 2.2
+// Esto es un juego de reacción, no una prueba de precisión milimétrica. Los
+// aros visibles son grandes y el imán debe sentirse igual de generoso con un
+// pulgar apurado, tanto en móvil como en la pantalla del stand.
+export const SNAP_START_CELLS = 3.25
+export const SNAP_END_CELLS = 2.75
 export const REMATCH_KEEP_SEED = 3
 export const TARGET_MIN_PX = 48
 export const TZ = 'America/La_Paz'
@@ -475,9 +478,11 @@ export function travelMsForCells(world: World, cells: Cell[]): number {
 
 export function assetDeadlineMs(incident: Incident): number {
   const window = Math.max(1, incident.commitMs - incident.appearMs)
-  // La decisión que importa es responder; la ruta visual ya es canónica.
-  // Dejamos margen humano real para entender el primer foco y para el pulgar.
-  const frac = incident.id === 0 ? 0.7 : incident.id === 2 ? 0.78 : 0.68
+  // El temporizador grande cuenta la ronda; éste es el que realmente importa
+  // para cada foco. Reservamos el final de cada ventana para que se vea el
+  // incendio y entre el siguiente foco, no para castigar a quien ya entendió
+  // el gesto. El primer foco tiene aún más aire porque es el FTUE real.
+  const frac = incident.id === 0 ? 0.86 : incident.id === 1 ? 0.82 : 0.84
   return incident.appearMs + window * frac
 }
 

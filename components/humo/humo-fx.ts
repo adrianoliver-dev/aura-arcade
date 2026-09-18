@@ -2,6 +2,7 @@ import {
   COLS,
   ROWS,
   TERRAIN,
+  assetDeadlineMs,
   assetCells,
   fireTimeMs,
   firstGuidePath,
@@ -672,9 +673,9 @@ function drawNode(ctx: CanvasRenderingContext2D, layout: GridLayout, world: Worl
     ctx.font = `700 ${Math.max(11, s * 0.42)}px ui-monospace, monospace`
     ctx.lineWidth = 4
     ctx.strokeStyle = 'rgba(13,18,16,0.7)'
-    ctx.strokeText('BASE', cx, cy - rad * 1.62)
+    ctx.strokeText('1 · BASE', cx, cy - rad * 1.62)
     ctx.fillStyle = CREMA
-    ctx.fillText('BASE', cx, cy - rad * 1.62)
+    ctx.fillText('1 · BASE', cx, cy - rad * 1.62)
     ctx.restore()
   }
 }
@@ -702,9 +703,9 @@ function drawFocusTarget(ctx: CanvasRenderingContext2D, layout: GridLayout, inc:
   ctx.font = `700 ${Math.max(11, s * 0.42)}px ui-monospace, monospace`
   ctx.lineWidth = 4
   ctx.strokeStyle = 'rgba(13,18,16,0.76)'
-  ctx.strokeText('SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
+  ctx.strokeText('2 · SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
   ctx.fillStyle = CREMA
-  ctx.fillText('SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
+  ctx.fillText('2 · SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
   ctx.restore()
 }
 
@@ -726,6 +727,7 @@ function drawFire(
     const showThreat = telegraph ? inc.id === 0 : t >= inc.appearMs || (t === 0 && inc.id === 0)
     if (!showThreat && t < inc.appearMs) continue
     const live = activeId === inc.id || (telegraph && inc.id === 0)
+    const urgent = live && t < assetDeadlineMs(inc)
     const { x, y, w, h, s } = cellRect(layout, inc.focus.c, inc.focus.r)
     const cx = x + w / 2
     const cy = y + h / 2
@@ -751,17 +753,17 @@ function drawFire(
         ax /= burn.length
         ay /= burn.length
         const spread = Math.sqrt(burn.length) * layout.cell * 0.55
-        ctx.fillStyle = live ? 'rgba(255,90,54,0.38)' : 'rgba(180,70,40,0.28)'
+        ctx.fillStyle = urgent ? 'rgba(255,90,54,0.38)' : 'rgba(110,58,38,0.22)'
         fillEllipse(ctx, ax, ay, spread * 1.2, spread * 0.82)
-        ctx.fillStyle = live ? 'rgba(255,159,28,0.48)' : 'rgba(200,90,40,0.24)'
+        ctx.fillStyle = urgent ? 'rgba(255,159,28,0.48)' : 'rgba(128,73,42,0.2)'
         fillEllipse(ctx, ax, ay - spread * 0.14, spread * 0.72, spread * 0.48)
       }
     }
 
-    const halo = s * (live ? 2.1 : 1.35)
+    const halo = s * (urgent ? 2.1 : 1.15)
     const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, halo)
-    g.addColorStop(0, `${BRASA}cc`)
-    g.addColorStop(0.45, `${BRASA2}66`)
+    g.addColorStop(0, urgent ? `${BRASA}cc` : 'rgba(138,67,39,0.52)')
+    g.addColorStop(0.45, urgent ? `${BRASA2}66` : 'rgba(138,67,39,0.18)')
     g.addColorStop(1, 'rgba(255,90,54,0)')
     ctx.fillStyle = g
     ctx.beginPath()
@@ -780,7 +782,7 @@ function drawFire(
     ctx.fill()
     ctx.globalAlpha = 1
 
-    if (!reduced && live) {
+    if (!reduced && urgent) {
       ctx.fillStyle = 'rgba(210,210,210,0.2)'
       for (let i = 0; i < 4; i++) {
         const u = (clockNow / 900 + i * 0.2 + inc.id) % 1
@@ -937,9 +939,11 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
     }
   }
 
+  // La línea orienta el gesto (base → aro); no es una ruta que haya que
+  // calcar. Mostrar el A* completo invitaba a garabatear y ocultaba la regla.
   const readyGuide =
     opts.phase === 'ready'
-      ? firstGuidePath(world).map(normOfCell)
+      ? [normOfCell(world.node), normOfCell(world.incidents[0]!.focus)]
       : opts.guide
   if (readyGuide.length > 1) {
     ctx.setLineDash([8, 10])

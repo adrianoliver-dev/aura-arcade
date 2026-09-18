@@ -2,6 +2,9 @@ node_modules
 .next
 .next-p2build
 .next-p3build
+.next-p3humo
+.next-p3humo2
+.next-p3humo3
 .data
 .env
 .env.*

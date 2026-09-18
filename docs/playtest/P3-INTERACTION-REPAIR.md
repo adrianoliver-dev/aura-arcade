@@ -29,5 +29,24 @@ Fecha: 2026-09-18. Alcance: `AURA: ANTES DEL HUMO`, no los cuatro prototipos de 
 ## Límites que siguen abiertos
 
 - Esto no sustituye una sesión humana cronometrada en teléfono físico.
-- Los modos PULSO, RADIO ROJA, MURO y SALIDA siguen marcados como `TALLER`; necesitan QA y rediseño independientes antes de una promoción de stand.
+- Nota histórica: aquel alcance aún nombraba PULSO, RADIO ROJA, MURO y SALIDA. En el producto vigente MURO y SALIDA fueron retirados; PULSO y RADIO tienen checks de interacción propios más abajo, pero aún requieren el playtest humano final.
 - Los MP4 de `public/trailers/final/` son anteriores a esta reparación; no deben presentarse como gameplay actual.
+
+## P3.1 — respuesta al playtest posterior
+
+El reporte de mesa indicó tres síntomas distintos: se intentaba **rodear** el fuego, la palabra “tarde” llegaba sin un reloj del foco, y un segundo intento correcto podía conservar el aviso de error anterior. No eran problemas de habilidad del visitante: la interfaz dejaba espacio para interpretarlos así.
+
+### Corrección aplicada
+
+- La guía dejó de dibujar el camino A* que parecía que había que calcar. Ahora sólo marca **1 · BASE → 2 · SOLTÁ AQUÍ** y el copy dice de forma explícita que no hay que rodear el fuego.
+- HUMO tiene un reloj de respuesta por foco (`FOCO 1/3 · CASA`), separado del reloj global de 40 s. Cuando vence, se retira el aro y el incendio se apaga visualmente a brasa; no se invita a dibujar una solución que ya no puntúa.
+- El primer foco tiene 12.04 s de respuesta; estanque y corral tienen 9.84 s y 10.08 s. El imán de inicio/final también se amplió para pulgar móvil.
+- Un arrastre válido borra de inmediato el consejo de fallo anterior. Al salvar, el HUD se concentra en `LLEGÓ` y `PRÓXIMO FOCO`, sin seguir anunciando un foco ya resuelto.
+
+### Evidencia reproducible
+
+- `node scripts/p3-humo-gesture-check.mjs`: intenta primero fuera de la base, comprueba el mensaje visible, luego arrastra base→aro y exige hectáreas positivas. Captura: `../polish/design-review/p3-trio/humo-gesture-pass-390.png`.
+- `node scripts/p3-pulso-tap-check.mjs`: espera la señal visual `¡AHORA!`, toca el canvas y exige puntaje positivo. Captura: `../polish/design-review/p3-trio/pulso-tap-pass-390.png`.
+- `node scripts/p3-radio-decision-check.mjs`: lee la pista de la tarjeta, pulsa la orden correspondiente y exige `¡SÍ!`. Captura: `../polish/design-review/p3-trio/radio-decision-pass-390.png`.
+
+Estos checks usan Chrome headless contra una build de producción a 390×844. Son evidencia de interacción y regresión, no una sustitución de 30 minutos con una persona y su teléfono.

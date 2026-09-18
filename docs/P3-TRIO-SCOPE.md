@@ -22,8 +22,9 @@ MURO y SALIDA se retiraron en P3. No son contenido oculto, ni desafíos desbloqu
 
 ## Evidencia P3 disponible
 
-- `pnpm test`: 32/32 tras el retiro; incluye simulaciones de HUMO, PULSO y RADIO.
+- `pnpm test`: 33/33 tras el retiro; incluye simulaciones de HUMO, PULSO y RADIO, más margen FTUE verificable para el primer foco de HUMO.
 - `public/art/sala-aura-chiquitania-v1.png`: ilustración original de atmósfera usada por Sala Aura. Es un fondo, no una excusa para ocultar información jugable.
+- Los checks de navegador `scripts/p3-humo-gesture-check.mjs`, `scripts/p3-pulso-tap-check.mjs` y `scripts/p3-radio-decision-check.mjs` ejercitan la interacción real de la build de producción a 390×844. Sus capturas están en `docs/polish/design-review/p3-trio/`.
 - Los MP4 en `public/trailers/final/` son anteriores a P3. No se pueden llamar finales ni volver a publicarse hasta capturar el trío actual con audio real.
 
 ## Límite honesto

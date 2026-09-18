@@ -10,6 +10,7 @@ import {
   MATCH_MS,
   TICK_MS,
   astar,
+  assetDeadlineMs,
   createWorld,
   firstGuidePath,
   guidePath,
@@ -158,11 +159,24 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
   const recOnceRef = useRef(false)
   const freezeRef = useRef(false)
   const shotOnceRef = useRef(false)
+  const coachRef = useRef('')
+  const coachUntilRef = useRef(0)
 
   const [phase, setPhase] = useState<Phase>('boot')
   const [runToken, setRunToken] = useState<string | null>(null)
   const [offline, setOffline] = useState(false)
-  const [hud, setHud] = useState({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint as string })
+  const [hud, setHud] = useState({
+    left: MATCH_MS,
+    ha: 0,
+    ghost: 0,
+    canAct: false,
+    clutch: false,
+    line: humoCopy.hint as string,
+    focusIndex: 0,
+    focusLabel: '',
+    focusLeft: 0,
+    focusBudget: 1,
+  })
   const [result, setResult] = useState<{
     hectares: number
     efficiency: number
@@ -182,6 +196,12 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
   const setPhaseBoth = (next: Phase) => {
     phaseRef.current = next
     setPhase(next)
+  }
+
+  const coach = (line: string, ms = 1_150) => {
+    coachRef.current = line
+    coachUntilRef.current = performance.now() + ms
+    setHud((prev) => ({ ...prev, line }))
   }
 
   useEffect(() => {
@@ -251,6 +271,8 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     dragDistRef.current = 0
     resolvedRef.current = new Set()
     freezeRef.current = false
+    coachRef.current = ''
+    coachUntilRef.current = 0
   }
 
   const startRun = useCallback(async () => {
@@ -313,7 +335,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       setOffline(true)
     }
     worldRef.current = createWorld(seedRef.current)
-    setHud({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint })
+    setHud({
+      left: MATCH_MS,
+      ha: 0,
+      ghost: 0,
+      canAct: false,
+      clutch: false,
+      line: humoCopy.hint,
+      focusIndex: 0,
+      focusLabel: '',
+      focusLeft: 0,
+      focusBudget: 1,
+    })
     setPhaseBoth('ready')
   }, [challengeSeed])
 
@@ -455,7 +488,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     lastRef.current = performance.now()
     resetFx()
     worldRef.current = createWorld(seedRef.current)
-    setHud({ left: MATCH_MS, ha: 0, ghost: 0, canAct: false, clutch: false, line: humoCopy.hint })
+    setHud({
+      left: MATCH_MS,
+      ha: 0,
+      ghost: 0,
+      canAct: false,
+      clutch: false,
+      line: humoCopy.hint,
+      focusIndex: 0,
+      focusLabel: '',
+      focusLeft: 0,
+      focusBudget: 1,
+    })
     setPhaseBoth('play')
   }, [])
 
@@ -479,7 +523,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       }
       etaRef.current = previewEta(world, inc0, drawingRef.current.points, 5_200)
       ghostRef.current = resolveIncident(world, inc0, { ...drawingRef.current, points: [...drawingRef.current.points, normOfCell(inc0.focus)] }).cells
-      setHud({ left: MATCH_MS - 5_200, ha: 0, ghost: ghostRef.current.length, canAct: true, clutch: false, line: humoCopy.draw })
+      setHud({
+        left: MATCH_MS - 5_200,
+        ha: 0,
+        ghost: ghostRef.current.length,
+        canAct: true,
+        clutch: false,
+        line: humoCopy.draw,
+        focusIndex: 1,
+        focusLabel: 'CASA',
+        focusLeft: 6_840,
+        focusBudget: 12_040,
+      })
       return
     }
     if (shot === 'save') {
@@ -487,7 +542,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       freezeRef.current = true
       tRef.current = 7_000
       commitStroke({ incident: 0, points: path, t0: 4_200, t1: 6_800 })
-      setHud({ left: MATCH_MS - 7_000, ha: hectaresRef.current, ghost: 0, canAct: false, clutch: false, line: humoCopy.juice.SAVE })
+      setHud({
+        left: MATCH_MS - 7_000,
+        ha: hectaresRef.current,
+        ghost: 0,
+        canAct: false,
+        clutch: false,
+        line: humoCopy.juice.SAVE,
+        focusIndex: 0,
+        focusLabel: '',
+        focusLeft: 0,
+        focusBudget: 1,
+      })
       return
     }
     if (shot === 'miss') {
@@ -621,10 +687,16 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       cancelDraw()
       return
     }
+    if (tRef.current >= assetDeadlineMs(inc)) {
+      cancelDraw()
+      coach(humoCopy.coachLate)
+      return
+    }
     const end = snapEnd(world, inc, last)
     if (!end.ok) {
       cancelDraw()
       pushJuice(humoCopy.coach, '#FF9F1C', 0.95)
+      coach(humoCopy.coachRelease)
       return
     }
     drawing.points = [drawing.points[0]!, end.snapped]
@@ -640,14 +712,24 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     if (!world) return
     const inc = incidentAt(tRef.current, world)
     if (!inc) return
+    if (tRef.current >= assetDeadlineMs(inc)) {
+      coach(humoCopy.coachLate)
+      return
+    }
     if (strokesRef.current.some((s) => s.incident === inc.id)) return
     const pt = eventToNorm(event)
     if (!pt) return
     const start = snapStart(world, pt)
     if (!start.ok) {
       pushJuice(humoCopy.coach, '#19C37D', 0.9)
+      coach(humoCopy.coach)
       return
     }
+    // Un segundo intento válido tiene prioridad: no dejamos que el aviso de
+    // error anterior diga "empezá" mientras el jugador ya está rescatando.
+    coachRef.current = ''
+    coachUntilRef.current = 0
+    juiceRef.current = juiceRef.current.filter((row) => row.label !== humoCopy.coach)
     try {
       event.currentTarget.setPointerCapture(event.pointerId)
     } catch {
@@ -791,20 +873,36 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
         }
         if (now - lastHudRef.current > 80) {
           lastHudRef.current = now
-          const canAct = Boolean(inc && !isTelegraph(t) && !strokesRef.current.some((s) => s.incident === inc.id))
+          const canAct = Boolean(inc && t < assetDeadlineMs(inc) && !isTelegraph(t) && !strokesRef.current.some((s) => s.incident === inc.id))
+          const next = world.incidents.find((row) => t < row.appearMs)
+          const focusBudget = inc ? Math.max(1, assetDeadlineMs(inc) - inc.appearMs) : 1
+          const focusLeft = inc ? Math.max(0, assetDeadlineMs(inc) - t) : 0
+          const focusLabel = inc?.kind === 'house' ? 'CASA' : inc?.kind === 'water' ? 'ESTANQUE' : inc ? 'CORRAL' : ''
+          const fallbackLine = next
+            ? `PRÓXIMO FOCO EN ${Math.max(1, Math.ceil((next.appearMs - t) / 1000))} S`
+            : inc
+              ? humoCopy.coachLate
+              : 'RUTA ENVIADA · MIRÁ EL PRÓXIMO FOCO'
           setHud({
             left: Math.max(0, MATCH_MS - t),
             ha: Math.round(haShownRef.current),
             ghost: drawingRef.current ? hud.ghost : 0,
             canAct,
             clutch,
-            line: drawingRef.current
-              ? humoCopy.draw
-              : clutch
-                ? 'ÚLTIMO FOCO · SOLTÁ EN EL ARO'
-                : canAct
-                  ? humoCopy.hint
-                  : 'La ruta llegó',
+            focusIndex: canAct && inc ? inc.id + 1 : 0,
+            focusLabel: canAct ? focusLabel : '',
+            focusLeft: canAct ? focusLeft : 0,
+            focusBudget,
+            line:
+              performance.now() < coachUntilRef.current
+                ? coachRef.current
+                : drawingRef.current
+                  ? humoCopy.draw
+                  : clutch
+                    ? 'ÚLTIMO FOCO · SOLTÁ EN EL ARO'
+                    : canAct
+                      ? humoCopy.hint
+                      : fallbackLine,
           })
         }
         }
@@ -819,10 +917,10 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
 
       const liveWorld = worldRef.current
       const liveInc = liveWorld ? incidentAt(tRef.current, liveWorld) : null
-      const canAct = Boolean(liveInc && !isTelegraph(tRef.current) && !strokesRef.current.some((s) => s.incident === liveInc.id))
+      const canAct = Boolean(liveInc && tRef.current < assetDeadlineMs(liveInc) && !isTelegraph(tRef.current) && !strokesRef.current.some((s) => s.incident === liveInc.id))
       const guide =
-        liveWorld && liveInc && !drawingRef.current && !strokesRef.current.some((s) => s.incident === liveInc.id)
-          ? guidePath(liveWorld, liveInc).map(normOfCell)
+        liveWorld && liveInc && canAct && !drawingRef.current && !strokesRef.current.some((s) => s.incident === liveInc.id)
+          ? [normOfCell(liveWorld.node), normOfCell(liveInc.focus)]
           : []
 
       drawFrame(ctx, w, h, {
@@ -928,6 +1026,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
           )}
         </button>
       </header>
+
+      {phase === 'play' && hud.focusIndex > 0 ? (
+        <div className="pointer-events-none absolute left-1/2 top-[max(0.65rem,env(safe-area-inset-top))] z-20 w-[10.5rem] -translate-x-1/2 rounded-full border border-[#F4E7CF]/25 bg-[#0D1210]/78 px-3 py-1.5 text-center backdrop-blur-sm">
+          <p className="font-[family-name:var(--hud-font)] text-[9px] tracking-[0.18em] text-[#F4E7CF]">{humoCopy.focus(hud.focusIndex, hud.focusLabel)}</p>
+          <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/15">
+            <div
+              className="h-full rounded-full bg-[#FF9F1C] transition-[width] duration-100"
+              style={{ width: `${Math.min(100, (hud.focusLeft / hud.focusBudget) * 100)}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
 
       {phase !== 'end' ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-[#0D1210]/75 via-[#0D1210]/20 to-transparent px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-10">
