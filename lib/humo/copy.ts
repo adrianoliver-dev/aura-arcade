@@ -29,7 +29,7 @@ export const humoCopy = {
   offline: 'Sin conexión',
   offlineBoard: 'Sin conexión; tu mejor ronda sigue acá',
   standQr: 'ESCANEÁ Y JUGÁ',
-  standUrl: 'aura.ia.bo/jugar',
+  standUrl: 'expo.aura.ia.bo/jugar',
   standBoard: 'Hoy',
   standKeys: 'Q código · L ranking',
   standInterest: 'Ping',

@@ -36,7 +36,7 @@ export const pulsoCopy = {
   li: 'LinkedIn',
   ig: 'Instagram',
   standQr: 'Escaneá y jugá',
-  standUrl: 'aura.ia.bo/pulso',
+  standUrl: 'expo.aura.ia.bo/lab/anillos',
   standBoard: 'Ranking de hoy',
   standKeys: 'Q código · L ranking · V video',
   standInterest: 'Último ping de campo',

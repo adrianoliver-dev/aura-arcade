@@ -28,7 +28,9 @@ pnpm dev
 
 Abrí [http://127.0.0.1:3020](http://127.0.0.1:3020). Tests: `pnpm test`. Build: `pnpm build`.
 
-Ranking en dev: `.data/arcade.json`. Para producción: `PULSO_KV_URL`, `PULSO_KV_TOKEN`, `PULSO_RUN_SECRET` y `NEXT_PUBLIC_ARCADE_URL`. Un host sin KV persistente no es apto para el ranking de feria.
+Ranking en dev: `.data/arcade.json`. En el stand de feria el ranking vive en volumen persistente del contenedor (`PULSO_RUN_SECRET` + `NEXT_PUBLIC_ARCADE_URL=https://expo.aura.ia.bo`). Upstash (`PULSO_KV_URL` / `PULSO_KV_TOKEN`) es opcional si hay más de una instancia.
+
+URL pública: [https://expo.aura.ia.bo](https://expo.aura.ia.bo).
 
 Fuente de verdad de duración, seed del día, score y anti-cheat: `lib/humo/sim.ts`.
 

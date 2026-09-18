@@ -1,0 +1,15 @@
+node_modules
+.next
+.next-*
+.git
+.env
+.env.*
+!.env.example
+.data
+docs
+capcut
+*.log
+.cursor
+.chrome-rec
+.tmp-p2
+.tmp-p4
