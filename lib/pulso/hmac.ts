@@ -12,7 +12,7 @@ function secret(): string {
   const s = process.env.PULSO_RUN_SECRET?.trim()
   if (s) return s
   if (process.env.NODE_ENV !== 'production') return 'pulso-dev-secret-not-for-prod'
-  return 'aura-pulso-fexpocruz-2026'
+  throw new Error('PULSO_RUN_SECRET is required in production')
 }
 
 function signBody(body: string): string {

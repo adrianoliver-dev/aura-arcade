@@ -2,19 +2,18 @@
 
 Stand Fexpocruz. **Repo aparte de Aura** para no romper producción.
 
-Producto público: **AURA: ANTES DEL HUMO — Ruta de escape**. Una ronda de 40 segundos. Un pulgar. Ranking de hoy.
-
-PULSO queda como attract de 10–15 s en `/loop`. RADIO / MURO / SALIDA viven en `/lab` (no indexados).
+Producto público: **AURA ARCADE**, una Sala Aura de tres retos: **ANTES DEL HUMO** (40 s), **PULSO** (45 s) y **RADIO ROJA** (45 s). MURO y SALIDA fueron retirados; sus rutas antiguas redirigen a `/lab`.
 
 Cuenta: [adrianoliver-dev](https://github.com/adrianoliver-dev).
 
 | Superficie | Ruta | Rol |
 |---|---|---|
-| Landing | `/` | CTA único `JUGÁ 40 S` |
+| Landing | `/` | CTA a Antes del Humo y entrada a Sala Aura |
 | Hero | `/jugar` | Antes del Humo |
-| QR | `/qr` | Afiche de stand |
-| TV | `/loop` | Attract PULSO → hero |
-| Lab | `/lab` | Prototipos post-evento |
+| Sala | `/lab` | Los tres retos públicos |
+| QR | `/qr` | Afiche de stand, generado desde la URL pública |
+| TV | `/loop` | Attract en vivo de Antes del Humo |
+| Reel | `/reel` | Previsualización en vivo; no sustituye el MP4 final |
 
 Es una metáfora jugable. No afirma minutos de anticipación, hectáreas reales ni eficacia operacional de Aura.
 
@@ -29,13 +28,13 @@ pnpm dev
 
 Abrí [http://127.0.0.1:3020](http://127.0.0.1:3020). Tests: `pnpm test`. Build: `pnpm build`.
 
-Ranking en dev: `.data/arcade.json`. Prod: `PULSO_KV_URL` + `PULSO_KV_TOKEN` y `PULSO_RUN_SECRET`.
+Ranking en dev: `.data/arcade.json`. Para producción: `PULSO_KV_URL`, `PULSO_KV_TOKEN`, `PULSO_RUN_SECRET` y `NEXT_PUBLIC_ARCADE_URL`. Un host sin KV persistente no es apto para el ranking de feria.
 
 Fuente de verdad de duración, seed del día, score y anti-cheat: `lib/humo/sim.ts`.
 
 ## Trailers
 
-Gameplay real de la build final. No hay video IA como sustituto. Ver `docs/video/` y `docs/ARCADE-RECOVERY-BRIEF.md`.
+Los MP4 existentes son históricos y no se publican como finales. La captura vigente se rige por `docs/video/P4-TRILOGY-CAPTURE-BRIEF.md`; debe ser gameplay real de la build desplegada.
 
 ## Licencia
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
+import { ArcadeQr } from '@/components/arcade/arcade-qr'
 import { humoCopy } from '@/lib/humo/copy'
 import { createWorld, daySeed, MATCH_MS, firstGuidePath, normOfCell } from '@/lib/humo/sim'
 import { drawFrame, gridLayout } from '@/components/humo/humo-fx'
@@ -89,7 +90,7 @@ export function HeroLanding() {
           VER SALA AURA
         </a>
         <div className="mt-4 flex items-center gap-3">
-          <img src="/qr-arcade.png" alt={humoCopy.standQr} width={88} height={88} className="rounded-md bg-[#F4E7CF] p-1" />
+          <ArcadeQr alt={humoCopy.standQr} size={88} className="rounded-md bg-[#F4E7CF] p-1" />
           <p className="text-sm text-[#C99052]">
             {Math.round(MATCH_MS / 1000)} segundos · un pulgar
             <br />

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
+import { ArcadeQr } from '@/components/arcade/arcade-qr'
 import { BOOT_BUDGET_MS, FETCH_BUDGET_MS, fetchWithTimeout, withTimeout } from '@/lib/arcade/fetch-timeout'
 import { humoCopy } from '@/lib/humo/copy'
 import {
@@ -1046,11 +1047,9 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
           </p>
           {phase === 'ready' ? (
             <div className="pointer-events-auto mt-3 flex items-end justify-between gap-3">
-              <img
-                src="/qr-arcade.png"
+              <ArcadeQr
                 alt={humoCopy.standQr}
-                width={72}
-                height={72}
+                size={72}
                 className={demo ? 'hidden' : 'hidden rounded-md bg-[#F4E7CF] p-1 md:block'}
               />
               <button
