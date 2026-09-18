@@ -6,9 +6,11 @@
 export const COLS = 12
 export const ROWS = 16
 
-export const READ_MS = 4_000
+// El foco inicial tiene que responder desde el primer fotograma. Antes había
+// cuatro segundos en los que el mapa se veía jugable, pero ignoraba el pulgar.
+export const READ_MS = 0
 export const TELEGRAPH_MS = READ_MS
-export const GUIDE_MS = 1_000
+export const GUIDE_MS = 0
 export const CASA_END_MS = 14_000
 export const WATER_START_MS = 15_000
 export const WATER_END_MS = 27_000
@@ -473,7 +475,9 @@ export function travelMsForCells(world: World, cells: Cell[]): number {
 
 export function assetDeadlineMs(incident: Incident): number {
   const window = Math.max(1, incident.commitMs - incident.appearMs)
-  const frac = incident.id === 0 ? 0.5 : incident.id === 2 ? 0.7 : 0.55
+  // La decisión que importa es responder; la ruta visual ya es canónica.
+  // Dejamos margen humano real para entender el primer foco y para el pulgar.
+  const frac = incident.id === 0 ? 0.7 : incident.id === 2 ? 0.78 : 0.68
   return incident.appearMs + window * frac
 }
 
@@ -575,10 +579,10 @@ function etaFromSlack(slack: number): EtaBand {
 }
 
 export function previewEta(world: World, incident: Incident, points: Point[], nowMs: number): EtaBand {
-  const cells = rasterizeStroke(world, points)
-  const last = cells[cells.length - 1] ?? world.node
-  const remain = astar(world, last, incident.focus) ?? bresenham(last, incident.focus)
-  const arrival = nowMs + travelMsForCells(world, remain)
+  // El gesto selecciona la salida y el foco; no debe volverse una prueba de
+  // caligrafía. Un temblor o una vuelta de más jamás puede cambiar el ETA.
+  void points
+  const arrival = nowMs + travelMsForCells(world, guidePath(world, incident))
   return etaFromSlack(assetDeadlineMs(incident) - arrival)
 }
 
@@ -591,7 +595,9 @@ export function resolveIncident(world: World, incident: Incident, stroke: Stroke
   if (!nearFocus(world, incident, last)) return empty
   if (stroke.t1 < incident.appearMs || stroke.t0 >= incident.commitMs) return empty
 
-  const cells = rasterizeStroke(world, stroke.points)
+  // Igual que el preview: el jugador confirma base → foco. La simulación abre
+  // el corredor seguro y sólo mide su tiempo de respuesta, no la forma del dedo.
+  const cells = guidePath(world, incident)
   const arrival = Math.max(stroke.t0, stroke.t1) + travelMsForCells(world, cells)
   const fireAt = assetDeadlineMs(incident)
   const slack = fireAt - arrival
@@ -607,7 +613,7 @@ export function resolveIncident(world: World, incident: Incident, stroke: Stroke
       savedCells.push(cell)
     }
   }
-  const quality = strokeOnRoad(world, cells)
+  const quality = 1
   return { id: incident.id, arrived: savedCells.length > 0, saved: savedCells.length, cells: savedCells, late, eta, quality }
 }
 

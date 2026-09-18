@@ -37,11 +37,11 @@ const browser = await puppeteer.launch({
 await mkdir(dir, { recursive: true })
 try {
   await shot(browser, 'ready-390.png', 390, 844, `${origin}/jugar?shot=ready`, 'JUGÁ 40 S', 400)
-  await shot(browser, 'action-390.png', 390, 844, `${origin}/jugar?shot=action`, 'Arrastrá', 700)
+  await shot(browser, 'action-390.png', 390, 844, `${origin}/jugar?shot=action`, 'SOLTÁ DENTRO DEL ARO NARANJA', 700)
   await shot(browser, 'save-390.png', 390, 844, `${origin}/jugar?shot=save`, 'LLEGÓ', 800)
   await shot(browser, 'end-win-390.png', 390, 844, `${origin}/jugar?shot=end-win`, 'OTRA RUTA', 800)
   await shot(browser, 'end-miss-390.png', 390, 844, `${origin}/jugar?shot=end-miss`, 'OTRA RUTA', 800)
-  await shot(browser, 'gameplay-1920x1080.png', 1920, 1080, `${origin}/jugar?shot=action`, 'Arrastrá', 800)
+  await shot(browser, 'gameplay-1920x1080.png', 1920, 1080, `${origin}/jugar?shot=action`, 'SOLTÁ DENTRO DEL ARO NARANJA', 800)
   await shot(browser, 'attract-1920x1080.png', 1920, 1080, `${origin}/loop`, 'ESCANEÁ', 5000)
 } finally {
   await browser.close()

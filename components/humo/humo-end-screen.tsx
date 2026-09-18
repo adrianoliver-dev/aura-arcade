@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 
 import { logPlaytest } from '@/lib/arcade/session-log'
@@ -121,6 +122,12 @@ export function HumoEndScreen({
         >
           {humoCopy.share}
         </button>
+        <Link
+          href="/"
+          className="flex min-h-11 items-center justify-center font-display text-sm tracking-wide text-[#F4E7CF]/80 underline decoration-[#19C37D]/70 underline-offset-4"
+        >
+          VOLVER A INICIO
+        </Link>
       </div>
 
       <details

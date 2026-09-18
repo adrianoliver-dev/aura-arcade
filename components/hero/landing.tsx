@@ -22,6 +22,10 @@ export function HeroLanding() {
       if (!alive) return
       const w = canvas.clientWidth
       const h = canvas.clientHeight
+      if (w < 1 || h < 1) {
+        raf = window.requestAnimationFrame(loop)
+        return
+      }
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
         canvas.width = Math.floor(w * dpr)
@@ -77,6 +81,12 @@ export function HeroLanding() {
           className="mt-6 inline-flex min-h-14 w-full max-w-sm items-center justify-center rounded-full bg-[#19C37D] font-display text-3xl text-[#0D1210]"
         >
           {humoCopy.cta}
+        </a>
+        <a
+          href="/lab"
+          className="mt-3 inline-flex min-h-11 w-fit items-center text-sm tracking-[0.14em] text-[#F4E7CF]/75 underline decoration-[#19C37D]/70 underline-offset-4"
+        >
+          VER SALA AURA
         </a>
         <div className="mt-4 flex items-center gap-3">
           <img src="/qr-arcade.png" alt={humoCopy.standQr} width={88} height={88} className="rounded-md bg-[#F4E7CF] p-1" />

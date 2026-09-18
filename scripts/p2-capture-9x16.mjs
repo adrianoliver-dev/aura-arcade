@@ -49,7 +49,7 @@ async function waitPainted(page) {
 async function followGuide(page) {
   for (let n = 0; n < 25; n++) {
     const g = await guide(page)
-    if (g?.path?.length >= 2 && g.phase === 'play' && g.t >= 4000) {
+    if (g?.path?.length >= 2 && g.phase === 'play' && g.t >= 0) {
       await dragPath(page, g.path)
       return
     }

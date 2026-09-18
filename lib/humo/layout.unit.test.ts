@@ -16,4 +16,11 @@ describe('layout del predio', () => {
     assert.ok(layout.gridH / 1080 >= 0.85, String(layout.gridH / 1080))
     assert.ok(layout.gridW / 1920 >= 0.55)
   })
+
+  it('no genera celdas negativas mientras el canvas monta oculto', () => {
+    const layout = gridLayout(0, 0)
+    assert.ok(layout.cell > 0)
+    assert.ok(layout.cellW > 0)
+    assert.ok(layout.cellH > 0)
+  })
 })

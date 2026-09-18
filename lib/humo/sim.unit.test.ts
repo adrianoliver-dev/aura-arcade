@@ -108,7 +108,7 @@ describe('ANTES DEL HUMO sim', () => {
   it('la partida dura 40s', () => {
     assert.equal(MATCH_MS, 40_000)
     assert.equal(FOCO_N, 3)
-    assert.equal(TELEGRAPH_MS, 4_000)
+    assert.equal(TELEGRAPH_MS, 0)
   })
 
   it('guidePath de casa coincide con firstGuidePath', () => {
@@ -119,7 +119,7 @@ describe('ANTES DEL HUMO sim', () => {
 
   it('los tres pulsos siguen el brief P2', () => {
     assert.deepEqual(WINDOWS, [
-      { appearMs: 4_000, commitMs: 14_000 },
+      { appearMs: 0, commitMs: 14_000 },
       { appearMs: 15_000, commitMs: 27_000 },
       { appearMs: 28_000, commitMs: 40_000 },
     ])
@@ -150,16 +150,23 @@ describe('ANTES DEL HUMO recovery', () => {
     }
   })
 
-  it('cada corredor produce un resultado distinto', () => {
+  it('el garabato no cambia el rescate: la respuesta abre el mismo corredor', () => {
     const seed = 20260918
     const world = createWorld(seed)
-    const t0 = world.incidents[1]!.appearMs + 120
-    const bands = (['fast', 'safe', 'cut'] as const).map((id) => {
-      const stroke = corridorStroke(world, 1, id, t0)
-      return simulateRun(seed, [stroke]).savedByIncident[1]!
-    })
-    const keys = new Set(bands.map((row) => `${row.saved}:${row.arrived}:${row.eta}`))
-    assert.ok(keys.size >= 2, JSON.stringify(bands))
+    const inc = world.incidents[1]!
+    const t0 = inc.appearMs + 120
+    const direct = corridorStroke(world, 1, 'fast', t0)
+    const scribble = {
+      ...direct,
+      points: [
+        direct.points[0]!,
+        { x: 0.08, y: 0.1 },
+        { x: 0.92, y: 0.86 },
+        { x: 0.15, y: 0.82 },
+        direct.points[direct.points.length - 1]!,
+      ],
+    }
+    assert.deepEqual(resolveIncident(world, inc, scribble), resolveIncident(world, inc, direct))
   })
 
   it('score y seed coinciden en dos llamadas (cliente/servidor)', () => {

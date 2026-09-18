@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 
 import { BOOT_BUDGET_MS, FETCH_BUDGET_MS, fetchWithTimeout, withTimeout } from '@/lib/arcade/fetch-timeout'
@@ -14,7 +15,6 @@ import {
   guidePath,
   incidentAt,
   isClutch,
-  isGuiding,
   isTelegraph,
   normOfCell,
   optimalStrokes,
@@ -98,25 +98,13 @@ function loadDayBest(): number {
   }
 }
 
-function saveDayGhost(ha: number, points: Point[]) {
+function saveDayBest(ha: number) {
   try {
     const prev = loadDayBest()
     if (ha < prev) return
     sessionStorage.setItem('humo:day-best', String(ha))
-    sessionStorage.setItem('humo:day-ghost', JSON.stringify(points))
   } catch {
     /* private */
-  }
-}
-
-function loadDayGhost(): Point[] {
-  try {
-    const raw = sessionStorage.getItem('humo:day-ghost')
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as Point[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
   }
 }
 
@@ -166,7 +154,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
   const grabAtRef = useRef(0)
   const snapAtRef = useRef(0)
   const dragDistRef = useRef(0)
-  const dayGhostRef = useRef<Point[]>([])
+  const resolvedRef = useRef(new Set<number>())
   const recOnceRef = useRef(false)
   const freezeRef = useRef(false)
   const shotOnceRef = useRef(false)
@@ -261,6 +249,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     grabAtRef.current = 0
     snapAtRef.current = 0
     dragDistRef.current = 0
+    resolvedRef.current = new Set()
     freezeRef.current = false
   }
 
@@ -271,7 +260,6 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     accRef.current = 0
     tRef.current = 0
     resetFx()
-    dayGhostRef.current = loadDayGhost()
     setPhaseBoth('boot')
     const localSeed = challengeSeed || playSeed(Date.now(), rematchCount())
     seedRef.current = localSeed
@@ -337,13 +325,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     return () => window.clearTimeout(id)
   }, [startRun])
 
+  useEffect(() => {
+    // El mismo control de sonido gobierna música y SFX; antes el mute sólo
+    // silenciaba los avisos y dejaba el drone de fondo encendido.
+    setHumoBedLevel(phase === 'play' && !muted)
+  }, [muted, phase])
+
   const finish = useCallback(async () => {
     const prevBest = loadPersonalBest()
     const localSim = simulateRun(seedRef.current, strokesRef.current)
     const arrived = localSim.savedByIncident.filter((row) => row.arrived).length
     savePersonalBest(localSim.hectares)
-    const ghostPts = strokesRef.current.flatMap((s) => s.points)
-    saveDayGhost(localSim.hectares, ghostPts)
+    saveDayBest(localSim.hectares)
     const local = {
       hectares: localSim.hectares,
       efficiency: localSim.efficiency,
@@ -427,6 +420,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     snapAtRef.current = performance.now()
     shocksRef.current = [...shocksRef.current, { x: focusPx.x, y: focusPx.y, born: performance.now(), color: preview.arrived ? '#19C37D' : '#FF5A36' }].slice(-6)
     if (preview.arrived && preview.saved > 0) {
+      resolvedRef.current.add(inc.id)
       playHumoCue('save')
       tap(10, reducedRef.current)
       shakeRef.current = 1.35
@@ -440,7 +434,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       floatersRef.current.push({ text: humoCopy.plusHa(preview.saved), x: focusPx.x, y: focusPx.y, born: performance.now(), color: '#19C37D' })
       const kind = inc.kind === 'water' ? 'water' : 'dust'
       particlesRef.current.push(...spawnBurst(focusPx.x, focusPx.y, inc.kind === 'water' ? '#6aa0aa' : '#19C37D', 18, 0.95, kind))
-      runnerRef.current = { points: stroke.points, born: performance.now() }
+      runnerRef.current = { points: guidePath(world, inc).map(normOfCell), born: performance.now() }
     } else {
       playHumoCue('miss')
       tap(18, reducedRef.current)
@@ -614,12 +608,14 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     etaRef.current = null
   }
 
-  const finishDraw = useCallback(() => {
+  const finishDraw = useCallback((event?: React.PointerEvent<HTMLCanvasElement>) => {
     const drawing = drawingRef.current
     if (!drawing || phaseRef.current !== 'play') return
     drawing.t1 = tRef.current
     const world = worldRef.current
     const inc = world?.incidents[drawing.incident]
+    const release = event ? eventToNorm(event) : null
+    if (release) drawing.points = [drawing.points[0]!, release]
     const last = drawing.points[drawing.points.length - 1]
     if (!movedRef.current || drawing.points.length < 2 || !inc || !last || !world) {
       cancelDraw()
@@ -631,7 +627,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       pushJuice(humoCopy.coach, '#FF9F1C', 0.95)
       return
     }
-    drawing.points.push(end.snapped)
+    drawing.points = [drawing.points[0]!, end.snapped]
     commitStroke(drawing)
   }, [commitStroke])
 
@@ -641,7 +637,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     if (phaseRef.current === 'ready') beginPlay()
     if (phaseRef.current !== 'play' || demo) return
     const world = worldRef.current
-    if (!world || isTelegraph(tRef.current)) return
+    if (!world) return
     const inc = incidentAt(tRef.current, world)
     if (!inc) return
     if (strokesRef.current.some((s) => s.incident === inc.id)) return
@@ -665,7 +661,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     tap(12, reducedRef.current)
     const nodePx = worldToPx(layoutRef.current, start.snapped)
     shocksRef.current = [...shocksRef.current, { x: nodePx.x, y: nodePx.y, born: performance.now(), color: '#19C37D' }].slice(-6)
-    drawingRef.current = { incident: inc.id, points: [start.snapped, pt], t0: tRef.current, t1: tRef.current }
+    drawingRef.current = { incident: inc.id, points: [start.snapped, start.snapped], t0: tRef.current, t1: tRef.current }
   }
 
   const onPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -679,14 +675,13 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       const oy = pt.y - origin.y
       if (ox * ox + oy * oy > 0.0008) movedRef.current = true
     }
-    const last = drawing.points[drawing.points.length - 1]
+    const last = drawing.points[1] ?? drawing.points[0]
     if (last) {
-      const nx = last.x + (pt.x - last.x) * 0.55
-      const ny = last.y + (pt.y - last.y) * 0.55
-      const step = Math.hypot(nx - last.x, ny - last.y)
+      const step = Math.hypot(pt.x - last.x, pt.y - last.y)
       if (step < 0.00012) return
-      if (drawing.points.length >= 96) return
-      drawing.points.push({ x: nx, y: ny })
+      // El recorrido se ve como un lazo claro base → dedo. No acumulamos
+      // garabatos ni dejamos de registrar el final al llegar a un límite.
+      drawing.points = [drawing.points[0]!, pt]
       dragDistRef.current += step
       if (dragDistRef.current >= 0.045) {
         dragDistRef.current = 0
@@ -707,6 +702,10 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       if (!alive) return
       const w = canvas.clientWidth
       const h = canvas.clientHeight
+      if (w < 1 || h < 1) {
+        raf = window.requestAnimationFrame(loop)
+        return
+      }
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
         canvas.width = Math.floor(w * dpr)
@@ -799,15 +798,13 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
             ghost: drawingRef.current ? hud.ghost : 0,
             canAct,
             clutch,
-            line: isTelegraph(t)
-              ? 'El predio se calienta'
-              : isGuiding(t)
-                ? 'Del verde al naranja'
-                : clutch
-                  ? 'Una más'
-                  : inc?.kind === 'water'
-                    ? 'Atajo o vuelta'
-                    : 'Base → fuego',
+            line: drawingRef.current
+              ? humoCopy.draw
+              : clutch
+                ? 'ÚLTIMO FOCO · SOLTÁ EN EL ARO'
+                : canAct
+                  ? humoCopy.hint
+                  : 'La ruta llegó',
           })
         }
         }
@@ -824,8 +821,8 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       const liveInc = liveWorld ? incidentAt(tRef.current, liveWorld) : null
       const canAct = Boolean(liveInc && !isTelegraph(tRef.current) && !strokesRef.current.some((s) => s.incident === liveInc.id))
       const guide =
-        liveWorld && liveInc && isGuiding(tRef.current) && !drawingRef.current
-          ? firstGuidePath(liveWorld).map(normOfCell)
+        liveWorld && liveInc && !drawingRef.current && !strokesRef.current.some((s) => s.incident === liveInc.id)
+          ? guidePath(liveWorld, liveInc).map(normOfCell)
           : []
 
       drawFrame(ctx, w, h, {
@@ -856,7 +853,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
         grabAt: grabAtRef.current,
         snapAt: snapAtRef.current,
         haShown: haShownRef.current,
-        dayGhost: dayGhostRef.current,
+        cleared: resolvedRef.current,
       })
       raf = window.requestAnimationFrame(loop)
     }
@@ -899,9 +896,18 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       />
 
       <header className="pointer-events-none absolute inset-x-0 top-[max(0.35rem,env(safe-area-inset-top))] z-20 flex items-start justify-between px-3">
-        <div className="rounded-2xl bg-[#F4E7CF] px-3 py-1.5 text-[#0D1210] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
-          <p className="font-display text-[2.1rem] leading-none tabular-nums">{seconds}</p>
-          <p className="text-xs font-semibold tracking-wide text-[#8B5E34]">{hud.ha} ha</p>
+        <div className="flex items-start gap-2">
+          <Link
+            href="/"
+            aria-label="Volver a Inicio"
+            className="pointer-events-auto flex h-12 items-center gap-1 rounded-full border border-[#F4E7CF]/70 bg-[#0D1210]/70 px-3 font-display text-sm text-[#F4E7CF] backdrop-blur-sm"
+          >
+            <span aria-hidden>←</span> INICIO
+          </Link>
+          <div className="rounded-2xl bg-[#F4E7CF] px-3 py-1.5 text-[#0D1210] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
+            <p className="font-display text-[2.1rem] leading-none tabular-nums">{seconds}</p>
+            <p className="text-xs font-semibold tracking-wide text-[#8B5E34]">{hud.ha} ha</p>
+          </div>
         </div>
         <button
           type="button"

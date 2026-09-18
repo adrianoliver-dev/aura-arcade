@@ -5,6 +5,7 @@ import {
   assetCells,
   fireTimeMs,
   firstGuidePath,
+  guidePath,
   incidentAt,
   normOfCell,
   type Cell,
@@ -52,7 +53,7 @@ export type DrawOpts = {
   grabAt?: number
   snapAt?: number
   haShown?: number
-  dayGhost?: Point[]
+  cleared?: Set<number>
 }
 
 const NIGHT = '#0D1210'
@@ -75,6 +76,12 @@ export function hash01(n: number): number {
 }
 
 export function gridLayout(w: number, h: number): GridLayout {
+  // Un canvas puede reportar 0×0 un frame al montar, al ocultarse o al volver
+  // desde otra pestaña. Nunca devolvemos celdas negativas: un solo arc inválido
+  // detiene para siempre el requestAnimationFrame del juego.
+  if (w < 1 || h < 1) {
+    return { ox: 0, oy: 0, cell: 1, cellW: 1, cellH: 1, gridW: 1, gridH: 1 }
+  }
   const portrait = h >= w * 0.92
   if (portrait) {
     const gridW = w
@@ -211,6 +218,27 @@ function noisyBlob(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: nu
     const y = cy + Math.sin(a) * ry * k
     if (i === 0) ctx.moveTo(x, y)
     else ctx.lineTo(x, y)
+  }
+  ctx.closePath()
+}
+
+// Para vegetación usamos bordes orgánicos suaves; el blob anguloso se reserva
+// para humo, tierra quemada y fuego. Así el monte no se lee como low-poly.
+function softBlob(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, seed: number, n = 10) {
+  const pts: Point[] = []
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2
+    const k = 0.78 + hash01(seed + i * 1.7) * 0.36
+    pts.push({ x: cx + Math.cos(a) * rx * k, y: cy + Math.sin(a) * ry * k })
+  }
+  const first = pts[0]!
+  const last = pts[pts.length - 1]!
+  ctx.beginPath()
+  ctx.moveTo((last.x + first.x) / 2, (last.y + first.y) / 2)
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i]!
+    const next = pts[(i + 1) % pts.length]!
+    ctx.quadraticCurveTo(p.x, p.y, (p.x + next.x) / 2, (p.y + next.y) / 2)
   }
   ctx.closePath()
 }
@@ -395,14 +423,22 @@ function drawScrub(ctx: CanvasRenderingContext2D, layout: GridLayout, world: Wor
       if (world.terrain[r * COLS + c] !== TERRAIN.monte) continue
       const cell = cellRect(layout, c, r)
       const n = hash01(world.seed + c * 13 + r * 29)
+      const x = cell.x + cell.w * (0.3 + n * 0.4)
+      const y = cell.y + cell.h * (0.55 + hash01(c + r) * 0.3)
       ctx.fillStyle = n > 0.55 ? '#1c2a1a' : '#243422'
-      fillEllipse(
-        ctx,
-        cell.x + cell.w * (0.3 + n * 0.4),
-        cell.y + cell.h * (0.55 + hash01(c + r) * 0.3),
-        cell.w * (0.28 + n * 0.22),
-        cell.h * (0.16 + n * 0.12),
-      )
+      softBlob(ctx, x, y, cell.w * (0.25 + n * 0.18), cell.h * (0.13 + n * 0.1), world.seed + c * 9 + r * 5, 7)
+      ctx.fill()
+      if (n > 0.68) {
+        ctx.strokeStyle = 'rgba(201,144,82,0.36)'
+        ctx.lineWidth = Math.max(0.7, layout.cell * 0.025)
+        for (let blade = 0; blade < 3; blade++) {
+          const bx = x + (blade - 1) * cell.w * 0.1
+          ctx.beginPath()
+          ctx.moveTo(bx, y + cell.h * 0.05)
+          ctx.lineTo(bx + (hash01(world.seed + blade + c) - 0.5) * cell.w * 0.16, y - cell.h * (0.09 + blade * 0.025))
+          ctx.stroke()
+        }
+      }
     }
   }
 }
@@ -433,7 +469,7 @@ function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, s: number
   if (kind === 'tree') {
     const trunkH = s * (0.62 + hash01(seed + 1) * 0.28)
     const trunkW = Math.max(2.4, s * 0.1)
-    ctx.fillStyle = '#4a3220'
+    ctx.fillStyle = '#342419'
     ctx.beginPath()
     ctx.moveTo(x - trunkW, y)
     ctx.lineTo(x + trunkW, y)
@@ -443,22 +479,38 @@ function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number, s: number
     ctx.fill()
     const crownY = y - trunkH * 0.88
     const crownX = x + lean * s * 0.5
-    ctx.fillStyle = '#1a2c1c'
-    fillEllipse(ctx, crownX, crownY + 2, s * 0.72, s * 0.48)
-    ctx.fillStyle = hash01(seed + 3) > 0.5 ? MONTE : '#2f4a30'
-    fillEllipse(ctx, crownX - s * 0.22, crownY - s * 0.08, s * 0.42, s * 0.34)
-    ctx.fillStyle = MONTE2
-    fillEllipse(ctx, crownX + s * 0.2, crownY - s * 0.04, s * 0.38, s * 0.3)
-    ctx.fillStyle = '#4a6a3a'
-    fillEllipse(ctx, crownX, crownY - s * 0.22, s * 0.34, s * 0.26)
+    ctx.strokeStyle = '#5e4027'
+    ctx.lineWidth = Math.max(1.6, trunkW * 0.7)
+    ctx.lineCap = 'round'
+    ctx.beginPath()
+    ctx.moveTo(x + lean * s * 0.12, y - trunkH * 0.38)
+    ctx.lineTo(crownX - s * 0.28, crownY + s * 0.15)
+    ctx.moveTo(x + lean * s * 0.14, y - trunkH * 0.52)
+    ctx.lineTo(crownX + s * 0.31, crownY + s * 0.11)
+    ctx.stroke()
+    ctx.fillStyle = '#172719'
+    softBlob(ctx, crownX, crownY + s * 0.05, s * 0.76, s * 0.48, seed + 2, 9)
+    ctx.fill()
+    ctx.fillStyle = hash01(seed + 3) > 0.5 ? '#294229' : '#314d2d'
+    softBlob(ctx, crownX - s * 0.22, crownY - s * 0.08, s * 0.46, s * 0.34, seed + 8, 8)
+    ctx.fill()
+    ctx.fillStyle = '#3d5931'
+    softBlob(ctx, crownX + s * 0.23, crownY - s * 0.03, s * 0.4, s * 0.3, seed + 13, 8)
+    ctx.fill()
+    ctx.fillStyle = hash01(seed + 7) > 0.52 ? '#58703a' : '#4d6637'
+    softBlob(ctx, crownX + s * (hash01(seed + 9) - 0.5) * 0.18, crownY - s * 0.23, s * 0.32, s * 0.24, seed + 21, 7)
+    ctx.fill()
     return
   }
-  ctx.fillStyle = '#1e2c1c'
-  fillEllipse(ctx, x, y, s * 0.42, s * 0.22)
-  ctx.fillStyle = hash01(seed) > 0.5 ? MONTE : MONTE2
-  fillEllipse(ctx, x + lean * s, y - s * 0.18, s * 0.36, s * 0.24)
-  ctx.fillStyle = '#3a522e'
-  fillEllipse(ctx, x - s * 0.16, y - s * 0.1, s * 0.22, s * 0.16)
+  ctx.fillStyle = '#192819'
+  softBlob(ctx, x, y, s * 0.46, s * 0.23, seed + 2, 7)
+  ctx.fill()
+  ctx.fillStyle = hash01(seed) > 0.5 ? '#2d482b' : '#365230'
+  softBlob(ctx, x + lean * s, y - s * 0.17, s * 0.38, s * 0.25, seed + 7, 7)
+  ctx.fill()
+  ctx.fillStyle = '#506838'
+  softBlob(ctx, x - s * 0.14, y - s * 0.12, s * 0.22, s * 0.15, seed + 12, 6)
+  ctx.fill()
 }
 
 function drawPond(ctx: CanvasRenderingContext2D, layout: GridLayout, cells: Cell[], now: number, seed: number) {
@@ -614,6 +666,46 @@ function drawNode(ctx: CanvasRenderingContext2D, layout: GridLayout, world: Worl
     ctx.arc(cx, cy, rad * (1.35 + 0.12 * Math.sin(now / 200)), 0, Math.PI * 2)
     ctx.stroke()
   }
+  if (hint) {
+    ctx.save()
+    ctx.textAlign = 'center'
+    ctx.font = `700 ${Math.max(11, s * 0.42)}px ui-monospace, monospace`
+    ctx.lineWidth = 4
+    ctx.strokeStyle = 'rgba(13,18,16,0.7)'
+    ctx.strokeText('BASE', cx, cy - rad * 1.62)
+    ctx.fillStyle = CREMA
+    ctx.fillText('BASE', cx, cy - rad * 1.62)
+    ctx.restore()
+  }
+}
+
+function drawFocusTarget(ctx: CanvasRenderingContext2D, layout: GridLayout, inc: Incident, now: number, reduced: boolean) {
+  const { x, y, w, h, s } = cellRect(layout, inc.focus.c, inc.focus.r)
+  const cx = x + w / 2
+  const cy = y + h / 2
+  const beat = reduced ? 0 : Math.sin(now / 180) * 0.09
+  const r = s * (1.2 + beat)
+  ctx.save()
+  ctx.strokeStyle = CREMA
+  ctx.lineWidth = Math.max(2.5, s * 0.08)
+  ctx.setLineDash([Math.max(5, s * 0.25), Math.max(4, s * 0.18)])
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.strokeStyle = BRASA2
+  ctx.lineWidth = Math.max(2, s * 0.055)
+  ctx.beginPath()
+  ctx.arc(cx, cy, r + s * 0.2, 0, Math.PI * 2)
+  ctx.stroke()
+  ctx.textAlign = 'center'
+  ctx.font = `700 ${Math.max(11, s * 0.42)}px ui-monospace, monospace`
+  ctx.lineWidth = 4
+  ctx.strokeStyle = 'rgba(13,18,16,0.76)'
+  ctx.strokeText('SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
+  ctx.fillStyle = CREMA
+  ctx.fillText('SOLTÁ AQUÍ', cx, cy - r - s * 0.5)
+  ctx.restore()
 }
 
 function drawFire(
@@ -623,12 +715,14 @@ function drawFire(
   t: number,
   now: number,
   saved: Set<string>,
+  cleared: Set<number>,
   activeId: number | null,
   reduced: boolean,
   telegraph: boolean,
 ) {
   const clockNow = clock(now, reduced)
   for (const inc of world.incidents) {
+    if (cleared.has(inc.id)) continue
     const showThreat = telegraph ? inc.id === 0 : t >= inc.appearMs || (t === 0 && inc.id === 0)
     if (!showThreat && t < inc.appearMs) continue
     const live = activeId === inc.id || (telegraph && inc.id === 0)
@@ -800,23 +894,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
   drawTerrain(ctx, w, h, layout, world, opts.now, opts.reduced)
 
   const savedKey = new Set(opts.saved.map((cell) => `${cell.c},${cell.r}`))
+  const cleared = opts.cleared ?? new Set<number>()
   const active = opts.phase === 'play' ? incidentAt(opts.t, world) : world.incidents[0] ?? null
   const telegraph = opts.phase === 'ready' || (opts.phase === 'play' && opts.t < world.incidents[0]!.appearMs)
-  drawFire(ctx, layout, world, opts.phase === 'ready' ? world.incidents[0]!.appearMs : opts.t, opts.now, savedKey, active?.id ?? null, opts.reduced, telegraph)
-
-  if (opts.dayGhost && opts.dayGhost.length > 1 && opts.phase === 'play') {
-    ctx.setLineDash([5, 8])
-    ctx.strokeStyle = 'rgba(244,231,207,0.28)'
-    ctx.lineWidth = 3
-    ctx.beginPath()
-    opts.dayGhost.forEach((p, i) => {
-      const px = worldToPx(layout, p)
-      if (i === 0) ctx.moveTo(px.x, px.y)
-      else ctx.lineTo(px.x, px.y)
-    })
-    ctx.stroke()
-    ctx.setLineDash([])
-  }
+  drawFire(ctx, layout, world, opts.phase === 'ready' ? world.incidents[0]!.appearMs : opts.t, opts.now, savedKey, cleared, active?.id ?? null, opts.reduced, telegraph)
 
   for (const cell of opts.ghost) {
     void cell
@@ -888,10 +969,16 @@ export function drawFrame(ctx: CanvasRenderingContext2D, w: number, h: number, o
     if (opts.phase === 'play' && opts.t < inc.appearMs && inc.id !== 0) continue
     drawAsset(ctx, layout, inc, opts.now, live, opts.reduced)
   }
+  if (active && opts.canAct && !cleared.has(active.id)) {
+    drawFocusTarget(ctx, layout, active, opts.now, opts.reduced)
+  }
 
   for (const stroke of opts.strokes) {
-    drawStrokePath(ctx, layout, stroke, `${AURA}99`, Math.max(8, layout.cell * 0.28))
-    drawStrokePath(ctx, layout, stroke, CREMA, 2.2)
+    const inc = world.incidents[stroke.incident]
+    if (!inc) continue
+    const visualStroke = { ...stroke, points: guidePath(world, inc).map(normOfCell) }
+    drawStrokePath(ctx, layout, visualStroke, `${AURA}99`, Math.max(8, layout.cell * 0.28))
+    drawStrokePath(ctx, layout, visualStroke, CREMA, 2.2)
   }
   if (opts.drawing) {
     const color = etaColor(opts.eta)
