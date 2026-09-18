@@ -1,8 +1,7 @@
-# Battery 2026-09-18T11:39:16.344Z
+# Battery — P3 trio
+
+Generado por `pnpm test` con 40 seeds deterministas por juego.
 
 HUMO óptimo ha avg 83 (match 40000ms)
-RADIO mixto score avg 298 (spam agua no empata al correcto)
-MURO flood walls legales 8, burned flood avg 147 vs abierto 148
-SALIDA tank hits avg 63 — ninguno es Sacó al pueblo
-SALIDA perfect hits avg 13 rescued avg 39
-PULSO auto score avg 47075
+RADIO mixto score avg 240 (spam agua no empata al correcto)
+PULSO auto score avg 32413

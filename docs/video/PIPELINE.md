@@ -13,7 +13,7 @@ Gameplay **real** (localhost :3020). No generar el play con IA.
 
 1. `public/trailers/loop-fexpo-16x9.mp4` — loop TV, 5 juegos + QR.
 2. `public/trailers/redes-a-pulso-humo.mp4` — short 9:16.
-3. `public/trailers/redes-b-radio-salida.mp4` — short 9:16 con QR.
+3. La variante P3 de RADIO se debe capturar desde la build vigente; no existe un short reutilizable antes de esa captura.
 
 Fuente: `public/trailers/loop-raw.mp4` (gdigrab 480×854).
 

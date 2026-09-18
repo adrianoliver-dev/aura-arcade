@@ -2,9 +2,9 @@
 
 export type Action = 'agua' | 'corte' | 'evacua'
 
-export const MATCH_MS = 90_000
+export const MATCH_MS = 45_000
 export const HOUSES = 3
-export const AMMO_START: Record<Action, number> = { agua: 8, corte: 8, evacua: 8 }
+export const AMMO_START: Record<Action, number> = { agua: 5, corte: 5, evacua: 5 }
 
 export type Call = {
   id: number
@@ -63,10 +63,13 @@ export function buildCalls(seed: number): Call[] {
     return step.value
   }
   const calls: Call[] = []
-  let t = 400
-  for (let i = 0; i < 14; i++) {
-    const row = PROMPTS[Math.floor(rand() * PROMPTS.length)]!
-    const window = Math.max(3800, 7200 - i * 220)
+  const deck: Action[] = ['agua', 'corte', 'evacua', 'agua', 'corte', 'evacua', 'agua', 'corte', 'evacua', 'agua', 'corte', 'evacua']
+  let t = 850
+  for (let i = 0; i < 12; i++) {
+    const action = deck.splice(Math.floor(rand() * deck.length), 1)[0]!
+    const options = PROMPTS.filter((row) => row.correct === action)
+    const row = options[Math.floor(rand() * options.length)]!
+    const window = Math.max(3_200, 4_850 - i * 145)
     const appearMs = t
     const commitMs = Math.min(MATCH_MS - 200, appearMs + window)
     calls.push({
@@ -79,7 +82,7 @@ export function buildCalls(seed: number): Call[] {
       clue: row.clue,
     })
     t += Math.floor(window * 0.72)
-    if (t > MATCH_MS - 4500) break
+    if (t > MATCH_MS - 3_350) break
   }
   return calls
 }

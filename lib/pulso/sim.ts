@@ -1,7 +1,7 @@
 /** Simulación determinista de AURA PULSO. Cliente y server usan el mismo código. */
 
 export const TICK_MS = 16
-export const MATCH_MS = 75_000
+export const MATCH_MS = 45_000
 export const CX = 0.5
 export const CY = 0.5
 export const ISLAND_R = 0.078
@@ -11,7 +11,7 @@ export const RING_THICK = 0.036
 export const PERFECT_BAND = 0.016
 export const EMBER_R = 0.02
 export const BREACH_PENALTY = 250
-export const RUSH_START_MS = 68_000
+export const RUSH_START_MS = 36_000
 export const MAX_EMBERS = 12
 
 export type PulseKind = 'PERFECT' | 'DOBLE' | 'CASI' | 'MISS' | 'BRECHA'
@@ -83,7 +83,7 @@ export function createSim(seed: number): SimState {
     finished: false,
     events: [],
   }
-  state.nextSpawn = 520 + Math.floor(rand(state) * 160)
+  state.nextSpawn = 360 + Math.floor(rand(state) * 120)
   return state
 }
 
@@ -94,7 +94,7 @@ function rush(state: SimState): boolean {
 function spawnInterval(state: SimState): number {
   if (rush(state)) return 220
   const u = Math.min(1, state.t / RUSH_START_MS)
-  return 860 - u * 420
+  return 760 - u * 330
 }
 
 function emberSpeed(state: SimState): number {

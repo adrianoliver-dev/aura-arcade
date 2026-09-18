@@ -46,16 +46,6 @@ export function missionFor(game: string, heat: number): { label: string; hint: s
       { label: 'Sin casas caídas', hint: 'Munición limitada' },
       { label: 'x5 racha', hint: 'No spamées el mismo botón' },
     ],
-    muro: [
-      { label: 'Casa en pie', hint: 'Pocos muros. Colocalos.' },
-      { label: '≤16 muros y vive', hint: 'El stock no pinta el mapa' },
-      { label: 'Dos chispas contenidas', hint: 'Cerrá el cuello, no el campo' },
-    ],
-    salida: [
-      { label: '6 sacados', hint: 'Gente verde, fuego naranja' },
-      { label: '≤4 golpes', hint: 'Tankear no da título' },
-      { label: '0 golpes', hint: 'Chasqui' },
-    ],
   }
   const rows = table[game] ?? table.radio!
   return rows[Math.min(heat - 1, rows.length - 1)]!

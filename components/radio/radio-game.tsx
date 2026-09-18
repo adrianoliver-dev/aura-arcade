@@ -28,10 +28,10 @@ import { loadGameBest, saveGameBest } from '@/lib/arcade/liga'
 import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 import type { BoardEntry } from '@/lib/pulso/types'
 
-const ACTIONS: { id: Action; label: string; hint: string; color: string }[] = [
-  { id: 'agua', label: 'AGUA', hint: 'Apagá', color: '#1F9ED8' },
-  { id: 'corte', label: 'CORTE', hint: 'Pared', color: '#F2A021' },
-  { id: 'evacua', label: 'EVACUÁ', hint: 'Gente', color: '#E34B34' },
+const ACTIONS: { id: Action; label: string; hint: string; color: string; rule: string }[] = [
+  { id: 'agua', label: 'AGUA', hint: 'foco + tanque', color: '#2B9ED6', rule: 'Apagá el foco' },
+  { id: 'corte', label: 'CORTE', hint: 'viento + monte', color: '#F2A021', rule: 'Cortá el avance' },
+  { id: 'evacua', label: 'EVACUÁ', hint: 'personas', color: '#E34B34', rule: 'Sacá a la gente' },
 ]
 
 type Phase = 'boot' | 'ready' | 'play' | 'end'
@@ -63,6 +63,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
   const [shake, setShake] = useState(0)
   const [flash, setFlash] = useState<'ok' | 'bad' | null>(null)
   const [toBeat, setToBeat] = useState(0)
+  const [learn, setLearn] = useState(true)
   const [result, setResult] = useState<{
     score: number
     subtitle: string
@@ -84,6 +85,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
     decisionsRef.current = []
     endedRef.current = false
     ammoRef.current = emptyAmmo()
+    setLearn(true)
     const id = loadIdentity(String(seedRef.current))
     setIdentity(id)
     if (demo) {
@@ -194,6 +196,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
         /* */
       }
       if (ok) {
+        setLearn(false)
         playHumoSave(call.stake)
         setFlash('ok')
         setHud((h) => {
@@ -244,6 +247,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       lastRef.current = now
       tRef.current = Math.min(MATCH_MS, tRef.current + dt)
       const t = tRef.current
+      if (t > 6_500) setLearn(false)
       if (endedRef.current) return
       const call = liveCall(t, callsRef.current, doneRef.current)
       if (call && !doneRef.current.has(call.id)) {
@@ -336,7 +340,9 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       className="relative h-full w-full overflow-hidden"
       style={{
         transform: shake ? `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)` : undefined,
-        background: hud.clutch ? '#1a0808' : '#0A0A0F',
+        background: hud.clutch
+          ? 'radial-gradient(circle at 50% 28%, #4a1614 0%, #180b0c 42%, #080d0b 100%)'
+          : 'radial-gradient(circle at 50% 26%, #193626 0%, #101a14 42%, #080d0b 100%)',
       }}
     >
       {phase === 'boot' ? <ArcadeBoot label="Sintonizando radio" /> : null}
@@ -352,7 +358,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
           kicker="RADIO ROJA"
           title="El predio llama."
           body="Tres botones. Munición corta. Cada error quema una casa."
-          cue="TOCÁ · 90s"
+          cue="ENTENDIDO · 45 S"
           accent="#E34B34"
           toBeat={toBeat}
           onStart={() => {
@@ -369,6 +375,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
           <ArcadeHud
             score={hud.score}
             timeMs={hud.left}
+            matchMs={MATCH_MS}
             accent="#E34B34"
             clutch={hud.clutch}
             left={
@@ -389,12 +396,14 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
             }
           />
 
-          <div className="mt-4 min-h-[9.5rem] rounded-2xl border border-[#E34B34]/40 bg-[#E34B34]/10 p-4 text-center">
+          <div className="relative mx-auto mt-4 min-h-[12rem] w-full max-w-4xl overflow-hidden rounded-[1.75rem] border border-[#E34B34]/45 bg-[#140e0e]/72 p-5 text-center shadow-[0_20px_55px_rgba(0,0,0,0.32)] md:min-h-[15rem] md:p-7">
+            <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#F2A021] to-transparent" />
+            <div className="pointer-events-none absolute right-4 top-4 h-12 w-12 rounded-full border border-[#E34B34]/40 [background:repeating-radial-gradient(circle_at_center,transparent_0,transparent_5px,#E34B3433_6px,#E34B3433_7px)]" />
             {call ? (
               <>
-                <p className="text-[11px] tracking-[0.2em] text-[#F2A021]">{hud.clutch ? 'YA' : 'CENTRAL'}</p>
-                <p className="mt-2 text-xl font-black leading-tight sm:text-2xl">{call.prompt}</p>
-                <p className="mt-2 text-sm text-white/60">{call.clue}</p>
+                <p className="text-[10px] font-semibold tracking-[0.28em] text-[#F2A021]">{hud.clutch ? 'ÚLTIMA VENTANA' : `TRANSMISIÓN ${String(call.id + 1).padStart(2, '0')}`}</p>
+                <p className="mt-3 text-[1.7rem] font-black leading-[0.96] tracking-tight sm:text-3xl">{call.prompt}</p>
+                <p className="mx-auto mt-3 inline-flex rounded-full border border-[#F4E7CF]/20 bg-[#F4E7CF]/[0.06] px-3 py-1.5 text-sm font-semibold text-[#FFF0D3]">PISTA: {call.clue}</p>
                 <div className="mx-auto mt-3 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-white/10">
                   <div
                     className={`h-full ${hud.clutch ? 'bg-[#E34B34]' : 'bg-[#F2A021]'}`}
@@ -403,9 +412,18 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
                 </div>
               </>
             ) : (
-              <p className="pt-8 text-sm text-white/50">La radio crepita…</p>
+              <div className="pt-9">
+                <p className="font-[family-name:var(--hud-font)] text-xs tracking-[0.26em] text-[#F2A021]">CENTRAL AURA</p>
+                <p className="mt-2 text-base font-semibold text-white/65">Escuchando la siguiente señal…</p>
+              </div>
             )}
           </div>
+
+          {learn ? (
+            <p className="mx-auto mt-3 max-w-xl rounded-xl border border-[#F2A021]/35 bg-[#F2A021]/10 px-3 py-2 text-center text-xs leading-snug text-[#FFF0D3]">
+              PERSONAS → EVACUÁ · AGUA CERCA → AGUA · VIENTO Y MONTE → CORTE
+            </p>
+          ) : null}
 
           {hud.juice ? (
             <p
@@ -419,7 +437,9 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
             <div className="mt-3 h-8" />
           )}
 
-          <div className="mt-auto grid grid-cols-3 gap-2">
+          <RadioSignalField active={Boolean(call)} clutch={hud.clutch} />
+
+          <div className="mx-auto mt-3 grid w-full max-w-5xl grid-cols-3 gap-2 rounded-[1.65rem] border border-white/10 bg-black/20 p-2">
             {ACTIONS.map((a) => (
               <button
                 key={a.id}
@@ -429,12 +449,12 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
                   event.preventDefault()
                   pick(a.id)
                 }}
-                className="min-h-[92px] rounded-xl py-4 text-center font-black disabled:opacity-40"
+                className="min-h-[105px] rounded-[1.1rem] border border-white/20 py-3 text-center font-black shadow-[0_7px_0_rgba(0,0,0,0.23)] transition-transform active:translate-y-1 active:shadow-none disabled:opacity-35"
                 style={{ background: a.color, color: '#0A0A0F' }}
               >
-                <span className="block text-lg">{a.label}</span>
-                <span className="block text-[11px] font-semibold opacity-80">{a.hint}</span>
-                <span className="mt-1 block font-[family-name:var(--hud-font)] text-[11px]">{hud.ammo[a.id]}</span>
+                <span className="block text-lg tracking-wide">{a.label}</span>
+                <span className="mt-0.5 block text-[10px] font-semibold opacity-85">{a.rule}</span>
+                <span className="mt-2 block border-t border-black/15 pt-1 font-[family-name:var(--hud-font)] text-[10px]">{a.hint} · {hud.ammo[a.id]}</span>
               </button>
             ))}
           </div>
@@ -460,6 +480,28 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
           onRematch={() => void startRun()}
         />
       ) : null}
+    </div>
+  )
+}
+
+function RadioSignalField({ active, clutch }: { active: boolean; clutch: boolean }) {
+  const glow = clutch ? '#E34B34' : '#19C37D'
+  return (
+    <div className="relative mx-auto flex min-h-[9rem] w-full max-w-3xl flex-1 items-center justify-center overflow-hidden md:min-h-[18rem]" aria-hidden>
+      <div
+        className="absolute h-44 w-44 rounded-full border opacity-70 md:h-80 md:w-80"
+        style={{ borderColor: `${glow}44`, boxShadow: `0 0 44px ${glow}18` }}
+      />
+      <div className="absolute h-28 w-28 rounded-full border border-[#F2A021]/20 md:h-52 md:w-52" />
+      <div className="absolute h-14 w-14 rounded-full border border-[#F4E7CF]/20 bg-[#0D1210]/50 md:h-28 md:w-28" />
+      <div className="relative flex flex-col items-center">
+        <svg width="96" height="44" viewBox="0 0 96 44" fill="none">
+          <path d="M1 24h10l6-13 9 24 9-32 9 34 9-19 8 6h12l6-12 8 12h8" stroke={glow} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="mt-2 font-[family-name:var(--hud-font)] text-[10px] tracking-[0.28em]" style={{ color: active ? '#F2A021' : '#F4E7CF88' }}>
+          {active ? 'SEÑAL ABIERTA' : 'ESPERANDO SEÑAL'}
+        </p>
+      </div>
     </div>
   )
 }

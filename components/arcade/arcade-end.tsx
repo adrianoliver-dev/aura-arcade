@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 
 import { addXp, heatFromXp, loadXp, xpFromScore } from '@/lib/arcade/progress'
 import { logPlaytest } from '@/lib/arcade/session-log'
@@ -192,6 +193,12 @@ export function ArcadeEnd({
           <button type="button" onClick={onRematch} className="min-h-12 rounded-2xl bg-[#F2A021] text-base font-black text-[#0A0A0F]">
             Otra ronda
           </button>
+          <Link
+            href="/lab"
+            className="flex min-h-11 items-center justify-center rounded-2xl border border-white/20 text-sm font-semibold tracking-wide text-white/85"
+          >
+            VOLVER A LA SALA
+          </Link>
         </div>
       </div>
     </div>

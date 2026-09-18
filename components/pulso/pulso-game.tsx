@@ -22,6 +22,7 @@ import {
   RUSH_START_MS,
   TICK_MS,
   comboMultiplier,
+  countHitsAtRing,
   countKind,
   createSim,
   shouldAutoTap,
@@ -432,6 +433,7 @@ export function PulsoGame({ demo = false }: Props) {
         <ArcadeHud
           score={hud.score}
           timeMs={hud.left}
+          matchMs={MATCH_MS}
           accent="#F2A021"
           clutch={hud.rush}
           left={
@@ -453,6 +455,14 @@ export function PulsoGame({ demo = false }: Props) {
             </>
           }
         />
+      ) : null}
+
+      {phase === 'play' && hud.kills === 0 && hud.left > MATCH_MS - 6_500 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-[max(5.25rem,env(safe-area-inset-bottom)+4rem)] z-20 flex justify-center px-4">
+          <p className="rounded-full border border-[#F2A021]/55 bg-[#0A0A0F]/80 px-4 py-2 text-center text-xs font-semibold tracking-wide text-[#FFF0D3] backdrop-blur-md">
+            ESPERÁ: aro naranja + brasa = TOCÁ
+          </p>
+        </div>
       ) : null}
 
       {demo ? null : (
@@ -539,16 +549,21 @@ function drawFrame(
   ctx.fillRect(0, 0, w, h)
 
   ctx.save()
-  ctx.strokeStyle = 'rgba(22,181,125,0.08)'
-  ctx.lineWidth = 1
-  for (let i = 1; i < 10; i++) {
+  ctx.strokeStyle = 'rgba(201,144,82,0.17)'
+  ctx.lineWidth = Math.max(1, size * 0.0025)
+  ctx.lineCap = 'round'
+  for (let i = 0; i < 6; i++) {
+    const y = oy + size * (0.12 + i * 0.15)
     ctx.beginPath()
-    ctx.moveTo(ox + (size * i) / 10, oy)
-    ctx.lineTo(ox + (size * i) / 10, oy + size)
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(ox, oy + (size * i) / 10)
-    ctx.lineTo(ox + size, oy + (size * i) / 10)
+    ctx.moveTo(ox - size * 0.05, y + Math.sin(i * 2.1) * size * 0.026)
+    ctx.bezierCurveTo(
+      ox + size * 0.28,
+      y - size * 0.07,
+      ox + size * 0.62,
+      y + size * 0.08,
+      ox + size * 1.05,
+      y - size * 0.025,
+    )
     ctx.stroke()
   }
   ctx.restore()
@@ -630,12 +645,13 @@ function drawFrame(
     ringR = opts.state.ringR
   }
 
+  const targetNow = Boolean(opts.state && countHitsAtRing(opts.state) > 0)
   ctx.beginPath()
   ctx.arc(cx, cy, S(ringR), 0, Math.PI * 2)
-  ctx.strokeStyle = wave.id === 'noche' ? '#E34B34' : '#16B57D'
-  ctx.lineWidth = Math.max(3, S(RING_THICK) * 0.55)
-  ctx.shadowColor = wave.id === 'noche' ? '#E34B34' : '#16B57D'
-  ctx.shadowBlur = 18
+  ctx.strokeStyle = targetNow ? '#F2A021' : wave.id === 'noche' ? '#E34B34' : '#16B57D'
+  ctx.lineWidth = Math.max(3, S(RING_THICK) * (targetNow ? 0.82 : 0.55))
+  ctx.shadowColor = targetNow ? '#F2A021' : wave.id === 'noche' ? '#E34B34' : '#16B57D'
+  ctx.shadowBlur = targetNow ? 26 : 18
   ctx.stroke()
   ctx.shadowBlur = 0
 
@@ -661,6 +677,17 @@ function drawFrame(
       ctx.closePath()
       ctx.fill()
     }
+  }
+
+  if (targetNow && opts.phase === 'play') {
+    ctx.save()
+    ctx.fillStyle = '#FFF0D3'
+    ctx.font = `800 ${Math.floor(size * 0.05)}px ui-sans-serif, system-ui`
+    ctx.textAlign = 'center'
+    ctx.shadowColor = '#F2A021'
+    ctx.shadowBlur = 14
+    ctx.fillText('¡AHORA!', cx, cy - S(0.57))
+    ctx.restore()
   }
 
   for (const p of opts.particles) {

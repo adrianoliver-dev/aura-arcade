@@ -19,7 +19,7 @@ type StoreShape = {
 const FILE = path.join(process.cwd(), '.data', 'arcade.json')
 const TOP_N = 50
 
-export type ArcadeGameId = 'humo' | 'anillos' | 'radio' | 'muro' | 'salida'
+export type ArcadeGameId = 'humo' | 'anillos' | 'radio'
 
 function todayKey(game: ArcadeGameId = 'humo', now = Date.now()): string {
   const day = new Intl.DateTimeFormat('en-CA', {

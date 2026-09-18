@@ -9,7 +9,7 @@ export default async function RadioPage({
   const sp = await searchParams
   return (
     <div className="relative h-full">
-      <ArcadeBack slot="3/5" />
+      <ArcadeBack slot="3/3" />
       <RadioGame demo={sp.demo === '1'} />
     </div>
   )

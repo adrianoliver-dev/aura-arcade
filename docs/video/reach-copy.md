@@ -12,7 +12,9 @@ Escaneá el QR y jugá gratis.
 El anillo cierra. Tocá ahora.
 AURA PULSO en el stand. 75 segundos. Ranking de hoy.
 
-## Redes B — SALIDA + QR
+## Archivo P2 — no publicar
+
+El copy que seguía pertenecía a SALIDA, juego retirado en P3. No se debe reutilizar para clips del trío actual.
 
 Sacá a la gente. Evitá el fuego.
 Jugá gratis: github.com/adrianoliver-dev/aura-arcade

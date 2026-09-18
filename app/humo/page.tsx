@@ -9,7 +9,7 @@ export default async function HumoPage({
   const sp = await searchParams
   return (
     <div className="relative h-full">
-      <ArcadeBack slot="2/5" />
+      <ArcadeBack slot="2/3" />
       <HumoGame demo={sp.demo === '1'} />
     </div>
   )

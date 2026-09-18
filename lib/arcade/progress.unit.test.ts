@@ -14,7 +14,7 @@ describe('arcade progress', () => {
 
   it('da XP por score y misiones por juego', () => {
     assert.ok(xpFromScore(120) >= 10)
-    assert.ok(missionFor('muro', 1).label.length > 3)
-    assert.ok(missionFor('salida', 5).hint.length > 3)
+    assert.ok(missionFor('anillos', 1).label.length > 3)
+    assert.ok(missionFor('radio', 5).hint.length > 3)
   })
 })

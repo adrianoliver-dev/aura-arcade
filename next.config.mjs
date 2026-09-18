@@ -10,8 +10,10 @@ const nextConfig = {
       { source: '/humo', destination: '/jugar', permanent: false },
       { source: '/anillos', destination: '/lab/anillos', permanent: false },
       { source: '/radio', destination: '/lab/radio', permanent: false },
-      { source: '/muro', destination: '/lab/muro', permanent: false },
-      { source: '/salida', destination: '/lab/salida', permanent: false },
+      { source: '/muro', destination: '/lab', permanent: false },
+      { source: '/salida', destination: '/lab', permanent: false },
+      { source: '/lab/muro', destination: '/lab', permanent: false },
+      { source: '/lab/salida', destination: '/lab', permanent: false },
     ]
   },
 }

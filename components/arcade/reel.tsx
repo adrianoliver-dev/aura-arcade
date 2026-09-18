@@ -4,18 +4,14 @@ import { useEffect, useState } from 'react'
 
 import { QrStand } from '@/components/arcade/qr-stand'
 import { HumoGame } from '@/components/humo/humo-game'
-import { MuroGame } from '@/components/muro/muro-game'
 import { PulsoGame } from '@/components/pulso/pulso-game'
 import { RadioGame } from '@/components/radio/radio-game'
-import { SalidaGame } from '@/components/salida/salida-game'
 
 const SLIDES = [
   { id: 'intro', ms: 3_000, title: 'AURA ARCADE', hook: 'Fexpocruz 2026' },
   { id: 'anillos', ms: 11_000, title: 'PULSO', hook: 'Tocá al ritmo' },
   { id: 'humo', ms: 11_000, title: 'ANTES DEL HUMO', hook: 'Trazá el camino' },
   { id: 'radio', ms: 11_000, title: 'RADIO ROJA', hook: 'Agua, corte o evacuá' },
-  { id: 'muro', ms: 11_000, title: 'MURO', hook: 'La casa no puede caer' },
-  { id: 'salida', ms: 11_000, title: 'SALIDA', hook: 'Sacá a la gente' },
   { id: 'qr', ms: 10_000, title: 'JUGÁ GRATIS', hook: 'Escaneá el QR' },
 ] as const
 
@@ -36,14 +32,12 @@ export function ArcadeReel() {
         <div className="flex h-full flex-col items-center justify-center px-6 text-center">
           <p className="font-[family-name:var(--hud-font)] text-[11px] tracking-[0.42em] text-[#16B57D]">AURA ARCADE</p>
           <h1 className="mt-4 text-5xl font-black tracking-tight">FEXPOCRUZ</h1>
-          <p className="mt-3 text-lg text-white/70">Cinco juegos. Un pulgar. 90 segundos.</p>
+          <p className="mt-3 text-lg text-white/70">Tres retos. Un pulgar. Una ronda.</p>
         </div>
       ) : null}
       {slide.id === 'anillos' ? <PulsoGame demo /> : null}
       {slide.id === 'humo' ? <HumoGame demo /> : null}
       {slide.id === 'radio' ? <RadioGame demo /> : null}
-      {slide.id === 'muro' ? <MuroGame demo /> : null}
-      {slide.id === 'salida' ? <SalidaGame demo /> : null}
       {slide.id === 'qr' ? <QrStand /> : null}
       {slide.id !== 'qr' && slide.id !== 'intro' ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-32 z-40 text-center">

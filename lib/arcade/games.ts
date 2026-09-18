@@ -1,7 +1,7 @@
 export type GameStatus = 'live' | 'soon'
 
 export type ArcadeGame = {
-  id: 'anillos' | 'humo' | 'radio' | 'muro' | 'salida'
+  id: 'anillos' | 'humo' | 'radio'
   href: string
   title: string
   blurb: string
@@ -41,25 +41,5 @@ export const ARCADE_GAMES: ArcadeGame[] = [
     promise: 'Agua, corte o evacuá. Ya.',
     status: 'live',
     accent: '#E34B34',
-  },
-  {
-    id: 'muro',
-    href: '/muro',
-    n: 4,
-    title: 'MURO',
-    blurb: 'Anillá la casa. Stock corto. El fuego da la vuelta.',
-    promise: 'Ocho muros. Un anillo. La casa no puede caer.',
-    status: 'live',
-    accent: '#C4B5FD',
-  },
-  {
-    id: 'salida',
-    href: '/salida',
-    n: 5,
-    title: 'SALIDA',
-    blurb: 'Tres sendas. Evitá el fuego. Sacá a la gente.',
-    promise: 'Cambiá de carril. No pares.',
-    status: 'live',
-    accent: '#7DDC68',
   },
 ]

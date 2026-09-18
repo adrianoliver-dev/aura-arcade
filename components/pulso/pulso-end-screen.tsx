@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 
 import { logPlaytest } from '@/lib/arcade/session-log'
 
@@ -247,6 +248,12 @@ export function PulsoEndScreen({
         >
           {pulsoCopy.rematch}
         </button>
+        <Link
+          href="/lab"
+          className="flex min-h-11 items-center justify-center rounded-lg border border-white/15 text-sm font-semibold text-white/85"
+        >
+          VOLVER A LA SALA
+        </Link>
         <button
           type="button"
           onClick={() => void share()}

@@ -1,6 +1,7 @@
 node_modules
 .next
 .next-p2build
+.next-p3build
 .data
 .env
 .env.*

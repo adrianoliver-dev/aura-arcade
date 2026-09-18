@@ -898,11 +898,11 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       <header className="pointer-events-none absolute inset-x-0 top-[max(0.35rem,env(safe-area-inset-top))] z-20 flex items-start justify-between px-3">
         <div className="flex items-start gap-2">
           <Link
-            href="/"
-            aria-label="Volver a Inicio"
+            href="/lab"
+            aria-label="Volver a Sala Aura"
             className="pointer-events-auto flex h-12 items-center gap-1 rounded-full border border-[#F4E7CF]/70 bg-[#0D1210]/70 px-3 font-display text-sm text-[#F4E7CF] backdrop-blur-sm"
           >
-            <span aria-hidden>←</span> INICIO
+            <span aria-hidden>←</span> SALA
           </Link>
           <div className="rounded-2xl bg-[#F4E7CF] px-3 py-1.5 text-[#0D1210] shadow-[0_8px_24px_rgba(0,0,0,0.28)]">
             <p className="font-display text-[2.1rem] leading-none tabular-nums">{seconds}</p>

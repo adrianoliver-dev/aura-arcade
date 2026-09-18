@@ -6,16 +6,17 @@ type Props = {
   score: number
   unit?: string
   timeMs: number
+  matchMs?: number
   accent: string
   clutch?: boolean
   left?: ReactNode
   right?: ReactNode
 }
 
-export function ArcadeHud({ score, unit = 'pts', timeMs, accent, clutch, left, right }: Props) {
-  const secs = Math.max(0, Math.min(90, Math.ceil(timeMs / 1000)))
+export function ArcadeHud({ score, unit = 'pts', timeMs, matchMs = 90_000, accent, clutch, left, right }: Props) {
+  const secs = Math.max(0, Math.min(Math.ceil(matchMs / 1000), Math.ceil(timeMs / 1000)))
   const danger = clutch || secs <= 8
-  const bar = Math.min(100, (secs / 90) * 100)
+  const bar = Math.min(100, (Math.max(0, timeMs) / matchMs) * 100)
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
