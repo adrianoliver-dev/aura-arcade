@@ -32,6 +32,41 @@ body {
   font-family: var(--font-display), var(--font-sans), sans-serif;
 }
 
+.sala-photo {
+  opacity: 0.46;
+  animation: sala-photo-drift 22s ease-in-out infinite alternate;
+  transform: scale(1.06);
+}
+
+.sala-lantern {
+  animation: sala-lantern-drift 11s ease-in-out infinite alternate;
+}
+
+.sala-lantern-alt {
+  animation-delay: -5.4s;
+}
+
+.sala-lines {
+  background: linear-gradient(90deg, transparent, rgba(25, 195, 125, 0.5), transparent);
+  animation: sala-line-scan 6s ease-in-out infinite;
+}
+
+@keyframes sala-photo-drift {
+  from { transform: scale(1.06) translate3d(-0.8%, -0.5%, 0); filter: saturate(0.9) contrast(1); }
+  to { transform: scale(1.13) translate3d(0.8%, 0.7%, 0); filter: saturate(1.15) contrast(1.06); }
+}
+
+@keyframes sala-lantern-drift {
+  from { transform: translate3d(-5%, -4%, 0) scale(0.85); opacity: 0.38; }
+  to { transform: translate3d(18%, 13%, 0) scale(1.18); opacity: 0.72; }
+}
+
+@keyframes sala-line-scan {
+  0%, 100% { opacity: 0; transform: translateY(-1.5rem); }
+  42% { opacity: 0.8; }
+  60% { opacity: 0; transform: translateY(9rem); }
+}
+
 * {
   box-sizing: border-box;
 }

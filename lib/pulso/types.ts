@@ -5,6 +5,8 @@ export type BoardEntry = {
   score: number
   comboMax: number
   at: number
+  /** Desempate. Si falta, el board usa `score`. HUMO guarda rankScore; los otros copian pts. */
+  rankScore?: number
 }
 
 export type InterestPing = {

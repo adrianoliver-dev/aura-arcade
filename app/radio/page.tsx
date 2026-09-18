@@ -1,5 +1,5 @@
 import { ArcadeBack } from '@/components/arcade/back'
-import { RadioGame } from '@/components/radio/radio-game'
+import { RadioGameV2 } from '@/components/radio/radio-game-v2'
 
 export default async function RadioPage({
   searchParams,
@@ -10,7 +10,7 @@ export default async function RadioPage({
   return (
     <div className="relative h-full">
       <ArcadeBack slot="3/3" />
-      <RadioGame demo={sp.demo === '1'} />
+      <RadioGameV2 demo={sp.demo === '1'} standalone />
     </div>
   )
 }

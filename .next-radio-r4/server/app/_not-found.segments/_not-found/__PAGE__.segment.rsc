@@ -1,0 +1,24 @@
+1:"$Sreact.fragment"
+2:I[8323,[],"OutletBoundary"]
+3:"$Sreact.suspense"
+7:I[8323,[],"ViewportBoundary"]
+8:I[8323,[],"MetadataBoundary"]
+9:I[8506,[],"IconMark"]
+b:I[986,[],""]
+c:I[7336,[],""]
+f:I[4550,["7177","static/chunks/app/layout-cf64ecd39aab6c5f.js"],"RegisterSw"]
+10:I[5103,["7177","static/chunks/app/layout-cf64ecd39aab6c5f.js"],"PulsoShell"]
+:HL["/_next/static/css/6fab33c755b0e793.css","style"]
+6:X
+e:X
+e:C
+0:{"buildId":"Q0Ka20AjhiRJEacvQD3Hu","data":[{"rsc":["$","$1","c",{"children":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],null,["$","$L2",null,{"children":["$","$3",null,{"name":"Next.MetadataOutlet","children":"$@4"}]}]]}],"isPartial":"$@5","staleTime":"$6","varyParams":null},{"rsc":["$","$1","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L7",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"}],["$","meta","2",{"name":"theme-color","content":"#0D1210"}]]}],["$","div",null,{"hidden":true,"children":["$","$L8",null,{"children":["$","$3",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"AURA: ANTES DEL HUMO"}],["$","meta","1",{"name":"description","content":"Trazá la ruta. 40 segundos. Salvás hectáreas. Ranking de hoy."}],["$","link","2",{"rel":"manifest","href":"/manifest.webmanifest"}],["$","link","3",{"rel":"icon","href":"/Aura_logo_BG.png"}],["$","$L9","4",{}]]}]}]}],null]}],"isPartial":"$@a","staleTime":"$6","varyParams":null},{"rsc":["$","$1","c",{"children":[null,["$","$Lb",null,{"parallelRouterKey":"children","template":["$","$Lc",null,{}]}]]}],"isPartial":"$@d","staleTime":"$6","varyParams":"$e"},{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/6fab33c755b0e793.css","precedence":"next"}]],["$","html",null,{"lang":"es","className":"__variable_ca3074 __variable_85de70","children":["$","body",null,{"children":[["$","$Lf",null,{}],["$","$L10",null,{"children":["$","$Lb",null,{"parallelRouterKey":"children","template":["$","$Lc",null,{}]}]}]]}]}]]}],"isPartial":"$@11","staleTime":"$6","varyParams":null}],"isUpgradeableISRFallback":false,"a":"$@12","rootVaryParams":null,"needsRuntimeRequest":"$@13"}
+4:null
+6:300
+13:true
+6:C
+12:0
+a:"$undefined"
+d:"$undefined"
+11:"$undefined"
+5:"$undefined"

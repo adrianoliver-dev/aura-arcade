@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/humo/run/finish/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"C:\\AdrianOliver-dev\\Aura\\aura-arcade\\app\\api\\humo\\run\\finish\\route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

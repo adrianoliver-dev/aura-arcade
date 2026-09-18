@@ -5,12 +5,10 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import {
   dailyMission,
   loadIdentity,
-  loadPersonalBest,
-  loadPlays,
-  savePersonalBest,
   type DailyMission,
 } from '@/lib/pulso/camba'
 import { pulsoCopy } from '@/lib/pulso/copy'
+import { pulsoNowLabelY } from '@/lib/pulso/now-label'
 import {
   CX,
   CY,
@@ -48,7 +46,7 @@ import { PulsoEndScreen } from './pulso-end-screen'
 import { ArcadeBoot } from '@/components/arcade/arcade-boot'
 import { ArcadeHud } from '@/components/arcade/arcade-hud'
 import { ArcadeReady } from '@/components/arcade/arcade-ready'
-import { saveGameBest } from '@/lib/arcade/liga'
+import { loadGameBest, saveGameBest, bumpPlays } from '@/lib/arcade/liga'
 import { addXp, xpFromScore } from '@/lib/arcade/progress'
 import { useDemoRematch } from '@/lib/arcade/use-demo-rematch'
 
@@ -94,6 +92,7 @@ export function PulsoGame({ demo = false }: Props) {
   const accRef = useRef(0)
   const lastRef = useRef(0)
   const lastHudRef = useRef(0)
+  const nowSignalRef = useRef(false)
   const identityRef = useRef({ alias: 'Yacare', tag: 'SCZ' })
   const waveRef = useRef('')
 
@@ -111,6 +110,7 @@ export function PulsoGame({ demo = false }: Props) {
     rush: false,
     kills: 0,
     wave: '',
+    now: false,
   })
   const [result, setResult] = useState<{
     score: number
@@ -200,7 +200,7 @@ export function PulsoGame({ demo = false }: Props) {
       setIdentity(nextId)
     }
     stateRef.current = createSim(seedRef.current)
-    setHud({ score: 0, combo: 0, left: MATCH_MS, rush: false, kills: 0, wave: waveAt(0).label })
+    setHud({ score: 0, combo: 0, left: MATCH_MS, rush: false, kills: 0, wave: waveAt(0).label, now: false })
     setPhaseBoth('ready')
   }, [])
 
@@ -213,7 +213,9 @@ export function PulsoGame({ demo = false }: Props) {
 
   const finish = useCallback(async (state: SimState) => {
     const id = identityRef.current
-    const prevBest = loadPersonalBest()
+    const prevBest = loadGameBest('anillos')
+    saveGameBest('anillos', state.score)
+    const plays = bumpPlays('anillos')
     const payload = {
       token: tokenRef.current,
       taps: tapsRef.current,
@@ -231,7 +233,7 @@ export function PulsoGame({ demo = false }: Props) {
       gap: 0,
       today: [] as BoardEntry[],
       personalBest: prevBest,
-      plays: 1,
+      plays,
     }
     try {
       const res = await fetch('/api/anillos/run/finish', {
@@ -249,7 +251,7 @@ export function PulsoGame({ demo = false }: Props) {
           gap: number
           today: BoardEntry[]
         }
-        savePersonalBest(data.score)
+        saveGameBest('anillos', data.score)
         setResult({
           score: data.score,
           comboMax: data.comboMax,
@@ -261,7 +263,7 @@ export function PulsoGame({ demo = false }: Props) {
           gap: data.gap,
           today: data.today ?? [],
           personalBest: prevBest,
-          plays: loadPlays(),
+          plays,
         })
         return
       }
@@ -275,10 +277,36 @@ export function PulsoGame({ demo = false }: Props) {
         /* private mode */
       }
     }
-    savePersonalBest(state.score)
-    saveGameBest('anillos', state.score)
     addXp(xpFromScore(state.score))
-    setResult({ ...local, plays: loadPlays() })
+    setResult(local)
+  }, [])
+
+  useEffect(() => {
+    const host = window as Window & {
+      __pulsoGuide?: () => {
+        phase: Phase
+        now: boolean
+        score: number
+        t: number
+        tap: { x: number; y: number }
+      } | null
+    }
+    host.__pulsoGuide = () => {
+      const canvas = canvasRef.current
+      const state = stateRef.current
+      if (!canvas) return null
+      const rect = canvas.getBoundingClientRect()
+      return {
+        phase: phaseRef.current,
+        now: Boolean(state && countHitsAtRing(state) > 0),
+        score: state?.score ?? 0,
+        t: state?.t ?? 0,
+        tap: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      }
+    }
+    return () => {
+      delete host.__pulsoGuide
+    }
   }, [])
 
   const beginPlay = useCallback(() => {
@@ -353,8 +381,10 @@ export function PulsoGame({ demo = false }: Props) {
             void finish(state)
           }
         }
-        if (now - lastHudRef.current > 90) {
+        const isNow = countHitsAtRing(state) > 0
+        if (now - lastHudRef.current > 90 || isNow !== nowSignalRef.current) {
           lastHudRef.current = now
+          nowSignalRef.current = isNow
           setHud({
             score: state.score,
             combo: state.streak,
@@ -362,6 +392,7 @@ export function PulsoGame({ demo = false }: Props) {
             rush: state.t >= RUSH_START_MS,
             kills: state.kills,
             wave: wave.label,
+            now: isNow,
           })
         }
       } else {
@@ -455,6 +486,14 @@ export function PulsoGame({ demo = false }: Props) {
             </>
           }
         />
+      ) : null}
+
+      {phase === 'play' && hud.now ? (
+        <div className="pointer-events-none absolute inset-x-0 top-[max(5.1rem,calc(env(safe-area-inset-top)+4.2rem))] z-30 flex justify-center">
+          <p className="rounded-full bg-[#F2A021] px-6 py-2 font-display text-4xl font-black tracking-[0.08em] text-[#0D1210] shadow-[0_0_32px_#F2A021aa] sm:text-5xl">
+            ¡AHORA!
+          </p>
+        </div>
       ) : null}
 
       {phase === 'play' && hud.kills === 0 && hud.left > MATCH_MS - 6_500 ? (
@@ -680,13 +719,15 @@ function drawFrame(
   }
 
   if (targetNow && opts.phase === 'play') {
+    const nowY = pulsoNowLabelY(w, h)
     ctx.save()
     ctx.fillStyle = '#FFF0D3'
-    ctx.font = `800 ${Math.floor(size * 0.05)}px ui-sans-serif, system-ui`
+    ctx.font = `800 ${Math.floor(size * 0.045)}px ui-sans-serif, system-ui`
     ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
     ctx.shadowColor = '#F2A021'
     ctx.shadowBlur = 14
-    ctx.fillText('¡AHORA!', cx, cy - S(0.57))
+    ctx.fillText('¡AHORA!', cx, nowY)
     ctx.restore()
   }
 

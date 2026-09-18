@@ -1,6 +1,7 @@
 /** Apodos y títulos de Fexpocruz — español camba, nunca “Visitante”. */
 
 import { FOCO_N } from '@/lib/humo/sim'
+import { loadGameBest, loadPlays as loadGamePlays, recordPlay } from '@/lib/arcade/liga'
 
 export const CAMBA_ALIAS = [
   'Yacare',
@@ -443,8 +444,6 @@ export function missionProgress(
 
 const ALIAS_KEY = 'pulso:alias'
 const TAG_KEY = 'pulso:tag'
-const PB_KEY = 'humo:pb'
-const PLAYS_KEY = 'humo:plays'
 
 export function loadIdentity(seed: string): { alias: string; tag: string } {
   try {
@@ -480,30 +479,13 @@ export function saveIdentity(alias: string, tag: string, custom = true): void {
 }
 
 export function loadPersonalBest(): number {
-  try {
-    return Math.max(0, Number(localStorage.getItem(PB_KEY) || 0) || 0)
-  } catch {
-    return 0
-  }
+  return loadGameBest('humo')
 }
 
 export function savePersonalBest(score: number): number {
-  const prev = loadPersonalBest()
-  const next = Math.max(prev, score)
-  try {
-    localStorage.setItem(PB_KEY, String(next))
-    const plays = Number(localStorage.getItem(PLAYS_KEY) || 0) + 1
-    localStorage.setItem(PLAYS_KEY, String(plays))
-  } catch {
-    /* private mode */
-  }
-  return next
+  return recordPlay('humo', score).best
 }
 
 export function loadPlays(): number {
-  try {
-    return Math.max(0, Number(localStorage.getItem(PLAYS_KEY) || 0) || 0)
-  } catch {
-    return 0
-  }
+  return loadGamePlays('humo')
 }

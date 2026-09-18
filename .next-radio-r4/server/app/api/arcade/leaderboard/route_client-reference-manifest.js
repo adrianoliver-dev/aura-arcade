@@ -1,0 +1,1 @@
+globalThis.__RSC_MANIFEST=(globalThis.__RSC_MANIFEST||{});globalThis.__RSC_MANIFEST["/api/arcade/leaderboard/route"]={"moduleLoading":{"prefix":"/_next/"},"ssrModuleMapping":{},"edgeSSRModuleMapping":{},"clientModules":{},"entryCSSFiles":{"C:\\AdrianOliver-dev\\Aura\\aura-arcade\\app\\api\\arcade\\leaderboard\\route":[]},"rscModuleMapping":{},"edgeRscModuleMapping":{}};

@@ -37,6 +37,7 @@ const ACTIONS: { id: Action; label: string; hint: string; color: string; rule: s
 type Phase = 'boot' | 'ready' | 'play' | 'end'
 
 export function RadioGame({ demo = false }: { demo?: boolean }) {
+  const phaseRef = useRef<Phase>('boot')
   const tRef = useRef(0)
   const seedRef = useRef(1)
   const tokenRef = useRef<string | null>(null)
@@ -75,9 +76,14 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
     personalBest: number
   } | null>(null)
 
+  const setPhaseBoth = (next: Phase) => {
+    phaseRef.current = next
+    setPhase(next)
+  }
+
   const startRun = useCallback(async () => {
     setResult(null)
-    setPhase('boot')
+    setPhaseBoth('boot')
     tRef.current = 0
     doneRef.current = new Set()
     clutchRef.current = new Set()
@@ -94,7 +100,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       callsRef.current = buildCalls(seedRef.current)
       setIdentity(loadIdentity(String(seedRef.current)))
       setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false, ammo: emptyAmmo() })
-      setPhase('ready')
+      setPhaseBoth('ready')
       return
     }
     try {
@@ -121,12 +127,38 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       setIdentity(loadIdentity(String(seedRef.current)))
     }
     setHud({ left: MATCH_MS, score: 0, streak: 0, houses: 3, juice: '', call: null, clutch: false, ammo: emptyAmmo() })
-    setPhase('ready')
+    setPhaseBoth('ready')
   }, [demo])
 
   useEffect(() => {
     void startRun()
   }, [startRun])
+
+  useEffect(() => {
+    const host = window as Window & {
+      __radioGuide?: () => {
+        phase: Phase
+        clue: string | null
+        prompt: string | null
+        correct: Action | null
+        label: string | null
+      } | null
+    }
+    host.__radioGuide = () => {
+      const call = liveCall(tRef.current, callsRef.current, doneRef.current)
+      const label = call ? ACTIONS.find((row) => row.id === call.correct)?.label ?? null : null
+      return {
+        phase: phaseRef.current,
+        clue: call?.clue ?? null,
+        prompt: call?.prompt ?? null,
+        correct: call?.correct ?? null,
+        label,
+      }
+    }
+    return () => {
+      delete host.__radioGuide
+    }
+  }, [])
 
   const finish = useCallback(async () => {
     if (endedRef.current) return
@@ -134,7 +166,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
     const local = simulateRun(seedRef.current, decisionsRef.current)
     const prize = radioTitle(local.score, local.saves, local.housesLeft)
     const prevBest = loadGameBest('radio')
-    saveGameBest('radio', local.score)
+    if (!demo) saveGameBest('radio', local.score)
     const base = {
       score: local.score,
       subtitle: `${local.saves} bien · ${local.misses} mal · ${local.housesLeft} casas`,
@@ -146,7 +178,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       personalBest: prevBest,
     }
     setResult(base)
-    if (!tokenRef.current) return
+    if (demo || !tokenRef.current) return
     try {
       const res = await fetch('/api/radio/run/finish', {
         method: 'POST',
@@ -177,7 +209,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
     } catch {
       /* offline */
     }
-  }, [identity.alias, identity.tag])
+  }, [demo, identity.alias, identity.tag])
 
   const pick = useCallback(
     (action: Action) => {
@@ -186,10 +218,8 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       const call = liveCall(tRef.current, callsRef.current, doneRef.current)
       if (!call) return
       doneRef.current.add(call.id)
-      const dry = ammoRef.current[action] <= 0
-      if (!dry) ammoRef.current[action] -= 1
       decisionsRef.current.push({ id: call.id, action, t: tRef.current })
-      const ok = !dry && action === call.correct
+      const ok = action === call.correct
       try {
         navigator.vibrate?.(ok ? 18 : 42)
       } catch {
@@ -219,14 +249,14 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
         setHud((h) => {
           const houses = Math.max(0, h.houses - 1)
           if (houses === 0) {
-            setPhase('end')
+            setPhaseBoth('end')
             void finish()
           }
           return {
             ...h,
             streak: 0,
             houses,
-            juice: dry ? 'SIN CARGA' : 'NO',
+            juice: 'NO',
             call: null,
             clutch: false,
             ammo: { ...ammoRef.current },
@@ -264,7 +294,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
           setHud((h) => {
             const houses = Math.max(0, h.houses - 1)
             if (houses === 0) {
-              setPhase('end')
+              setPhaseBoth('end')
               void finish()
             }
             return {
@@ -288,7 +318,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       }
       setShake((s) => s * 0.82)
       if (t >= MATCH_MS) {
-        setPhase('end')
+        setPhaseBoth('end')
         void finish()
         return
       }
@@ -304,7 +334,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
       void unlockPulsoAudio()
       tRef.current = 0
       lastRef.current = performance.now()
-      setPhase('play')
+      setPhaseBoth('play')
     }, 900)
     return () => window.clearTimeout(id)
   }, [demo, phase])
@@ -319,7 +349,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
         void unlockPulsoAudio()
         tRef.current = 0
         lastRef.current = performance.now()
-        setPhase('play')
+        setPhaseBoth('play')
         return
       }
       if (phase !== 'play') return
@@ -357,7 +387,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
         <ArcadeReady
           kicker="RADIO ROJA"
           title="El predio llama."
-          body="Tres botones. Munición corta. Cada error quema una casa."
+          body="Tres botones. Siete señales. Cada error quema una casa."
           cue="ENTENDIDO · 45 S"
           accent="#E34B34"
           toBeat={toBeat}
@@ -365,7 +395,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
             void unlockPulsoAudio()
             tRef.current = 0
             lastRef.current = performance.now()
-            setPhase('play')
+            setPhaseBoth('play')
           }}
         />
       ) : null}
@@ -454,7 +484,7 @@ export function RadioGame({ demo = false }: { demo?: boolean }) {
               >
                 <span className="block text-lg tracking-wide">{a.label}</span>
                 <span className="mt-0.5 block text-[10px] font-semibold opacity-85">{a.rule}</span>
-                <span className="mt-2 block border-t border-black/15 pt-1 font-[family-name:var(--hud-font)] text-[10px]">{a.hint} · {hud.ammo[a.id]}</span>
+                <span className="mt-2 block border-t border-black/15 pt-1 font-[family-name:var(--hud-font)] text-[10px]">{a.hint}</span>
               </button>
             ))}
           </div>

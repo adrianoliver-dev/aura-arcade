@@ -21,7 +21,7 @@ export const humoCopy = {
   copied: 'Copiado',
   rankToday: 'Ranking de hoy',
   gapLead: 'Vas 1°',
-  newRecord: 'Tu mejor',
+  newRecord: '¡Récord tuyo!',
   leftover: 'Te quedó una ruta.',
   skipAlias: 'Seguir',
   aliasLabel: 'Apodo (opcional)',

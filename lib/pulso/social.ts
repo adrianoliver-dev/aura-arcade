@@ -1,9 +1,19 @@
 /** Redes del stand. No están en contact.ts de master; override por env. */
 
-const ARCADE_URL = process.env.NEXT_PUBLIC_ARCADE_URL?.trim() || 'http://127.0.0.1:3020'
+const ARCADE_URL = (process.env.NEXT_PUBLIC_ARCADE_URL?.trim() || 'http://127.0.0.1:3020').replace(/\/$/, '')
 
 export const PULSO_PUBLIC_URL = ARCADE_URL
 export const HUMO_PLAY_URL = `${ARCADE_URL}/jugar`
+
+/** Payload del QR de stand: abre la partida, no la landing ni localhost inventado. */
+export function arcadeQrTarget(base = PULSO_PUBLIC_URL): string {
+  const origin = base.replace(/\/$/, '')
+  return origin.endsWith('/jugar') ? origin : `${origin}/jugar`
+}
+
+export function arcadePlayHostLabel(target = arcadeQrTarget()): string {
+  return target.replace(/^https?:\/\//, '')
+}
 
 export function humoChallengeUrl(shareSeed: string): string {
   return `${HUMO_PLAY_URL}?s=${encodeURIComponent(shareSeed)}`

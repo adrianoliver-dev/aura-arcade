@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const board = await readLeaderboard()
+  const board = await readLeaderboard('anillos')
   return NextResponse.json(board, {
     headers: { 'Cache-Control': 'no-store' },
   })

@@ -1,5 +1,5 @@
 import { qrSvg } from '@/lib/pulso/qr'
-import { PULSO_PUBLIC_URL } from '@/lib/pulso/social'
+import { arcadeQrTarget } from '@/lib/pulso/social'
 
 type Props = {
   alt?: string
@@ -12,7 +12,7 @@ type Props = {
  * Así no puede sobrevivir un PNG de localhost, GitHub o un dominio anterior.
  */
 export function ArcadeQr({ alt = 'QR para jugar AURA ARCADE', className, size = 280 }: Props) {
-  const svg = qrSvg(PULSO_PUBLIC_URL, size)
+  const svg = qrSvg(arcadeQrTarget(), size)
   const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 
   return <img src={src} alt={alt} width={size} height={size} className={className} />

@@ -5,6 +5,8 @@ node_modules
 .next-p3humo
 .next-p3humo2
 .next-p3humo3
+.next-p4video
+tsconfig.tsbuildinfo
 .data
 .env
 .env.*
@@ -12,6 +14,7 @@ node_modules
 *.log
 .DS_Store
 .tmp-p2
+.tmp-p4
 
 .chrome-rec
 assets/fonts/*.ttf

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { humoCopy } from '@/lib/humo/copy'
 import { qrSvg } from '@/lib/pulso/qr'
-import { PULSO_PUBLIC_URL } from '@/lib/pulso/social'
+import { arcadePlayHostLabel, arcadeQrTarget } from '@/lib/pulso/social'
 import type { BoardEntry, InterestPing } from '@/lib/pulso/types'
 
 import { unlockPulsoAudio } from '@/components/pulso/pulso-audio'
@@ -20,13 +20,13 @@ export function HumoStand() {
   const [interest, setInterest] = useState<InterestPing | null>(null)
 
   const qrSrc = useMemo(() => {
-    const svg = qrSvg(PULSO_PUBLIC_URL, 320)
+    const svg = qrSvg(arcadeQrTarget(), 320)
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
   }, [])
 
   const refreshBoard = useCallback(async () => {
     try {
-      const res = await fetch('/api/pulso/leaderboard', { cache: 'no-store' })
+      const res = await fetch('/api/humo/leaderboard', { cache: 'no-store' })
       if (!res.ok) return
       const data = (await res.json()) as {
         today: BoardEntry[]
@@ -78,12 +78,12 @@ export function HumoStand() {
           <h2 className="mt-2 text-3xl font-black">{humoCopy.standQr}</h2>
           <img
             src={qrSrc}
-            alt={PULSO_PUBLIC_URL}
+            alt={arcadeQrTarget()}
             width={320}
             height={320}
             className="mt-6 rounded-xl bg-white p-3"
           />
-          <p className="mt-4 text-lg font-semibold tracking-wide text-[#F2A021]">{humoCopy.standUrl}</p>
+          <p className="mt-4 text-lg font-semibold tracking-wide text-[#F2A021]">{arcadePlayHostLabel()}</p>
         </div>
       ) : null}
 

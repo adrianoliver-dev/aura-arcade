@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/anillos/leaderboard": {},
+    "/api/anillos/run/finish": {},
+    "/api/anillos/run/start": {},
+    "/api/arcade/leaderboard": {},
+    "/api/humo/capture": {},
+    "/api/humo/leaderboard": {},
+    "/api/humo/run/finish": {},
+    "/api/humo/run/start": {},
+    "/api/pulso/interest": {},
+    "/api/pulso/leaderboard": {},
+    "/api/pulso/run/finish": {},
+    "/api/pulso/run/start": {},
+    "/api/radio/leaderboard": {},
+    "/api/radio/run/finish": {},
+    "/api/radio/run/start": {}
+  }
+}

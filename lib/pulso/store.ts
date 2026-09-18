@@ -1,11 +1,12 @@
 /**
- * Leaderboard PULSO.
+ * Leaderboard del arcade.
  * Prod: PULSO_KV_URL + PULSO_KV_TOKEN (Upstash REST) y PULSO_RUN_SECRET.
  * Dev sin KV: archivo `.data/arcade.json`.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 
+import { FAIR_N, TODAY_N, rankAttempt, sortBoard, upsertBestByAlias } from '@/lib/arcade/board'
 import type { BoardEntry, InterestPing } from '@/lib/pulso/types'
 
 export type { BoardEntry, InterestPing }
@@ -17,11 +18,10 @@ type StoreShape = {
 }
 
 const FILE = path.join(process.cwd(), '.data', 'arcade.json')
-const TOP_N = 50
 
 export type ArcadeGameId = 'humo' | 'anillos' | 'radio'
 
-function todayKey(game: ArcadeGameId = 'humo', now = Date.now()): string {
+function todayKey(game: ArcadeGameId, now = Date.now()): string {
   const day = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/La_Paz',
     year: 'numeric',
@@ -31,7 +31,7 @@ function todayKey(game: ArcadeGameId = 'humo', now = Date.now()): string {
   return `${game}-today:${day}`
 }
 
-function fairKey(game: ArcadeGameId = 'humo'): string {
+function fairKey(game: ArcadeGameId): string {
   return `${game}-fair`
 }
 
@@ -91,46 +91,6 @@ async function writeFileStore(data: StoreShape): Promise<void> {
   } catch {
     /* contenedor de prod a veces es de solo lectura */
   }
-}
-
-function ensureUniqueAlias(list: BoardEntry[], alias: string, id: string): string {
-  const taken = new Set(
-    list.filter((row) => row.id !== id).map((row) => row.alias.toLowerCase()),
-  )
-  if (!taken.has(alias.toLowerCase())) return alias
-  for (let n = 2; n < 100; n++) {
-    const next = `${alias.slice(0, 10)}${n}`.slice(0, 12)
-    if (!taken.has(next.toLowerCase())) return next
-  }
-  return `${alias.slice(0, 8)}${(Date.now() % 1000).toString().padStart(3, '0')}`.slice(0, 12)
-}
-
-function uniquifyAliases(entries: BoardEntry[]): BoardEntry[] {
-  const seen = new Map<string, number>()
-  return entries.map((row) => {
-    const base = row.alias.replace(/\d+$/, '') || row.alias
-    const key = base.toLowerCase()
-    const n = (seen.get(key) ?? 0) + 1
-    seen.set(key, n)
-    if (n === 1) return row
-    const suffix = String(n)
-    return { ...row, alias: `${base.slice(0, 12 - suffix.length)}${suffix}` }
-  })
-}
-
-function sortBoard(entries: BoardEntry[]): BoardEntry[] {
-  return uniquifyAliases([...entries].sort((a, b) => b.score - a.score || a.at - b.at)).slice(0, TOP_N)
-}
-
-function rankOf(entries: BoardEntry[], id: string, score: number): { rank: number; total: number; gap: number } {
-  const sorted = sortBoard(entries)
-  const total = sorted.length
-  const idx = sorted.findIndex((e) => e.id === id)
-  const rank = idx >= 0 ? idx + 1 : sorted.filter((e) => e.score > score).length + 1
-  const better = sorted.filter((e) => e.score > score)
-  const next = better.length ? better[better.length - 1]!.score : score
-  const gap = Math.max(0, next - score)
-  return { rank, total, gap }
 }
 
 async function getBoard(key: string): Promise<BoardEntry[]> {
@@ -194,7 +154,7 @@ export async function runWasUsed(runId: string): Promise<boolean> {
 
 export async function saveScore(
   entry: BoardEntry,
-  game: ArcadeGameId = 'humo',
+  game: ArcadeGameId,
 ): Promise<{
   rank: number
   total: number
@@ -203,26 +163,22 @@ export async function saveScore(
   fair: BoardEntry[]
   alias: string
 }> {
-  const day = todayKey(game, entry.at)
+  const unique: BoardEntry = {
+    ...entry,
+    rankScore: entry.rankScore ?? entry.score,
+  }
+  const day = todayKey(game, unique.at)
   const today = await getBoard(day)
   const fair = await getBoard(fairKey(game))
-  const alias = ensureUniqueAlias([...today, ...fair], entry.alias, entry.id)
-  const unique = { ...entry, alias }
-  const upsert = (list: BoardEntry[]) => {
-    const i = list.findIndex((e) => e.id === unique.id)
-    if (i >= 0) list[i] = unique
-    else list.push(unique)
-    return list
-  }
-  const todayNext = upsert(today)
-  const fairNext = upsert(fair)
+  const ranked = rankAttempt(today, unique)
+  const todayNext = upsertBestByAlias(today, unique)
+  const fairNext = upsertBestByAlias(fair, unique)
   await setBoard(day, todayNext)
   await setBoard(fairKey(game), fairNext)
-  const ranked = rankOf(todayNext, unique.id, unique.score)
   return {
     ...ranked,
-    today: sortBoard(todayNext).slice(0, 10),
-    fair: sortBoard(fairNext).slice(0, 5),
+    today: sortBoard(todayNext).slice(0, TODAY_N),
+    fair: sortBoard(fairNext).slice(0, FAIR_N),
     alias: unique.alias,
   }
 }
@@ -231,28 +187,30 @@ export async function updateAlias(
   runId: string,
   alias: string,
   tag: string,
-  game: ArcadeGameId = 'humo',
+  game: ArcadeGameId,
 ): Promise<BoardEntry | null> {
-  const day = todayKey(game)
   const patch = async (key: string) => {
     const list = await getBoard(key)
     const i = list.findIndex((e) => e.id === runId)
     if (i < 0) return null
-    list[i] = { ...list[i]!, alias: ensureUniqueAlias(list, alias, runId), tag }
-    await setBoard(key, list)
-    return list[i]!
+    const current = list[i]!
+    const renamed = { ...current, alias, tag }
+    const without = list.filter((_, idx) => idx !== i)
+    await setBoard(key, upsertBestByAlias(without, renamed))
+    return renamed
   }
-  await patch(fairKey(game))
-  return patch(day)
+  const todayHit = await patch(todayKey(game))
+  const fairHit = await patch(fairKey(game))
+  return todayHit ?? fairHit
 }
 
-export async function readLeaderboard(game: ArcadeGameId = 'humo'): Promise<{
+export async function readLeaderboard(game: ArcadeGameId): Promise<{
   today: BoardEntry[]
   fair: BoardEntry[]
   lastInterest: InterestPing | null
 }> {
-  const today = sortBoard(await getBoard(todayKey(game))).slice(0, 10)
-  const fair = sortBoard(await getBoard(fairKey(game))).slice(0, 5)
+  const today = sortBoard(await getBoard(todayKey(game))).slice(0, TODAY_N)
+  const fair = sortBoard(await getBoard(fairKey(game))).slice(0, FAIR_N)
   let lastInterest: InterestPing | null = null
   if (kvEnabled()) {
     const raw = (await redis(['GET', 'pulso:interest:last'])) as string | null

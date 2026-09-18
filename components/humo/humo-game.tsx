@@ -31,7 +31,8 @@ import {
   type Stroke,
   type World,
 } from '@/lib/humo/sim'
-import { loadIdentity, loadPersonalBest, savePersonalBest } from '@/lib/pulso/camba'
+import { loadIdentity } from '@/lib/pulso/camba'
+import { recordPlay } from '@/lib/arcade/liga'
 import type { BoardEntry } from '@/lib/pulso/types'
 import { getPulsoMuteSnapshot, setPulsoMuted, subscribePulsoMute } from '@/components/pulso/pulso-audio'
 import { playHumoCue, setHumoBedLevel, unlockHumoAudio } from './humo-audio'
@@ -190,6 +191,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     medal: string
     headline: string
     dayBest: number
+    alias: string
   } | null>(null)
   const [toBeat, setToBeat] = useState(0)
   const muted = useSyncExternalStore(subscribePulsoMute, getPulsoMuteSnapshot, () => false)
@@ -286,14 +288,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
     setPhaseBoth('boot')
     const localSeed = challengeSeed || playSeed(Date.now(), rematchCount())
     seedRef.current = localSeed
-    identityRef.current = { alias: 'Ronda', tag: 'SCZ' }
-    try {
-      if (localStorage.getItem('humo:alias-custom') === '1') {
-        identityRef.current = loadIdentity(String(localSeed))
-      }
-    } catch {
-      /* auto */
-    }
+    identityRef.current = loadIdentity(String(localSeed))
     const cached = readCachedBoard()
     if (cached[0]) setToBeat(cached[0].score)
 
@@ -366,10 +361,10 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
   }, [muted, phase])
 
   const finish = useCallback(async () => {
-    const prevBest = loadPersonalBest()
     const localSim = simulateRun(seedRef.current, strokesRef.current)
     const arrived = localSim.savedByIncident.filter((row) => row.arrived).length
-    savePersonalBest(localSim.hectares)
+    const played = recordPlay('humo', localSim.hectares)
+    const prevBest = played.prevBest
     saveDayBest(localSim.hectares)
     const local = {
       hectares: localSim.hectares,
@@ -383,6 +378,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
       medal: localSim.medal,
       headline: localSim.headline,
       dayBest: Math.max(loadDayBest(), localSim.hectares),
+      alias: identityRef.current.alias,
     }
     setResult(local)
     try {
@@ -424,6 +420,7 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
           medal: data.medal ?? localSim.medal,
           headline: data.headline ?? localSim.headline,
           dayBest: Math.max(loadDayBest(), data.hectares ?? localSim.hectares),
+          alias: identityRef.current.alias,
         })
       }
     } catch {
@@ -1078,10 +1075,10 @@ export function HumoGame({ demo = false, challengeSeed = null, rec = null, shot 
           headline={result.headline}
           dayBest={result.dayBest}
           seed={seedRef.current}
-          initialAlias=""
+          initialAlias={result.alias}
           runToken={runToken}
           toBeat={toBeat}
-          offline={offline || result.rank == null}
+          offline={offline}
           onRematch={rematch}
         />
       )}

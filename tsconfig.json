@@ -33,7 +33,11 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next-p4video/types/**/*.ts",
+    ".next-p4video/dev/types/**/*.ts",
+    ".next-radio-r4/types/**/*.ts",
+    ".next-radio-r4/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

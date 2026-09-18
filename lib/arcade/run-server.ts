@@ -38,7 +38,7 @@ export async function handleFinish(
   play: (
     body: Record<string, unknown>,
     seed: number,
-  ) => { score: number; comboMax: number; [k: string]: unknown } | { error: string },
+    ) => { score: number; comboMax: number; rankScore?: number; [k: string]: unknown } | { error: string },
 ) {
   const ip = clientIp(request)
   if (!rateLimit(`${game}-finish:${ip}`, 60, 60_000)) {
@@ -88,6 +88,7 @@ export async function handleFinish(
     return NextResponse.json({ error: 'duplicate' }, { status: 409 })
   }
 
+  const rankScore = typeof result.rankScore === 'number' ? result.rankScore : result.score
   const board = await saveScore(
     {
       id: payload.runId,
@@ -95,6 +96,7 @@ export async function handleFinish(
       tag,
       score: result.score,
       comboMax: result.comboMax,
+      rankScore,
       at: Date.now(),
     },
     game,

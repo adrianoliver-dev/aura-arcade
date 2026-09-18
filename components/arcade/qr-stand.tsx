@@ -2,7 +2,7 @@
 
 import { ArcadeQr } from '@/components/arcade/arcade-qr'
 import { humoCopy } from '@/lib/humo/copy'
-import { PULSO_PUBLIC_URL } from '@/lib/pulso/social'
+import { arcadePlayHostLabel, arcadeQrTarget } from '@/lib/pulso/social'
 
 export function QrStand() {
   return (
@@ -11,14 +11,14 @@ export function QrStand() {
       <h1 className="font-display text-5xl text-[#F4E7CF]">{humoCopy.cta}</h1>
       <p className="max-w-xs text-lg text-[#F4E7CF]/80">Escaneá. Trazá la ruta. 40 segundos.</p>
       <ArcadeQr
-        alt={`QR para jugar en ${PULSO_PUBLIC_URL}`}
-        size={280}
+        alt={`QR para jugar en ${arcadeQrTarget()}`}
+        size={360}
         className="rounded-2xl bg-[#F4E7CF] p-3"
       />
       <a href="/jugar" className="min-h-12 min-w-48 rounded-full bg-[#19C37D] px-6 py-3 font-display text-2xl text-[#0D1210]">
         {humoCopy.cta}
       </a>
-      <p className="max-w-xs break-all text-sm text-[#C99052]">{PULSO_PUBLIC_URL}</p>
+      <p className="max-w-xs break-all text-sm text-[#C99052]">{arcadePlayHostLabel()}</p>
     </main>
   )
 }

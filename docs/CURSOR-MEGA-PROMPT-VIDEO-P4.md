@@ -70,7 +70,7 @@ Crear también `docs/video/p4/` con un manifiesto por export y framegrabs. Conse
 | Tiempo | Acción real en pantalla | Texto de apoyo |
 | --- | --- | --- |
 | 0.0–1.5 | Predio HUMO, foco naranja late y la casa está en riesgo. | `¿LLEGÁS ANTES DEL HUMO?` |
-| 1.5–5.5 | Un único trazo limpio sale de `BASE`, llega a `SOLTÁ AQUÍ`, feedback `LLEGÓ`; el foco se apaga. | `TRAZÁ LA RESPUESTA` |
+| 1.5–5.5   | Un único trazo limpio sale de `BASE`, llega a `SOLTÁ AQUÍ`, feedback `LLEGÓ`; el foco se apaga. | `TRAZÁ LA RESPUESTA` |
 | 5.5–7.5 | Payoff físico: predio salvado y hectáreas/medalla legibles. | `PROTEGÉ EL PREDIO` |
 | 7.5–10.8 | Match cut a PULSO: aro y brasa coinciden, toque correcto, racha responde. | `TOCÁ JUSTO` |
 | 10.8–14.0 | Match cut a RADIO: pista visible, decisión correcta, la casa queda a salvo. | `DECIDÍ RÁPIDO` |

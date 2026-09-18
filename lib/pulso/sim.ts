@@ -250,6 +250,17 @@ export function simulateRun(seed: number, tapTimesMs: number[]): SimResult {
   return { score: state.score, comboMax: state.comboMax, kills: state.kills, events: state.events }
 }
 
+export function parseTaps(raw: unknown): number[] | null {
+  if (!Array.isArray(raw) || raw.length > 240) return null
+  const out: number[] = []
+  for (const item of raw) {
+    const n = Number(item)
+    if (!Number.isFinite(n)) return null
+    out.push(n)
+  }
+  return out
+}
+
 export function shouldAutoTap(state: SimState): boolean {
   return state.embers.some((e) => emberInBand(e, state.ringR, PERFECT_BAND))
 }

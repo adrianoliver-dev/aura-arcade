@@ -1,4 +1,4 @@
-import { RadioGame } from '@/components/radio/radio-game'
+import { RadioGameV2 } from '@/components/radio/radio-game-v2'
 
 export default async function LabRadioPage({
   searchParams,
@@ -6,5 +6,5 @@ export default async function LabRadioPage({
   searchParams: Promise<{ demo?: string }>
 }) {
   const sp = await searchParams
-  return <RadioGame demo={sp.demo === '1'} />
+  return <RadioGameV2 demo={sp.demo === '1'} />
 }

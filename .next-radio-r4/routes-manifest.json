@@ -1,0 +1,273 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    },
+    {
+      "source": "/humo",
+      "destination": "/jugar",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/humo(?:/)?$"
+    },
+    {
+      "source": "/anillos",
+      "destination": "/lab/anillos",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/anillos(?:/)?$"
+    },
+    {
+      "source": "/radio",
+      "destination": "/lab/radio",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/radio(?:/)?$"
+    },
+    {
+      "source": "/muro",
+      "destination": "/lab",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/muro(?:/)?$"
+    },
+    {
+      "source": "/salida",
+      "destination": "/lab",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/salida(?:/)?$"
+    },
+    {
+      "source": "/lab/muro",
+      "destination": "/lab",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/lab/muro(?:/)?$"
+    },
+    {
+      "source": "/lab/salida",
+      "destination": "/lab",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/lab/salida(?:/)?$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/anillos",
+      "regex": "^/anillos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/anillos(?:/)?$"
+    },
+    {
+      "page": "/api/anillos/leaderboard",
+      "regex": "^/api/anillos/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/anillos/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/anillos/run/finish",
+      "regex": "^/api/anillos/run/finish(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/anillos/run/finish(?:/)?$"
+    },
+    {
+      "page": "/api/anillos/run/start",
+      "regex": "^/api/anillos/run/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/anillos/run/start(?:/)?$"
+    },
+    {
+      "page": "/api/arcade/leaderboard",
+      "regex": "^/api/arcade/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/arcade/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/arcade/playtest",
+      "regex": "^/api/arcade/playtest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/arcade/playtest(?:/)?$"
+    },
+    {
+      "page": "/api/humo/capture",
+      "regex": "^/api/humo/capture(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/humo/capture(?:/)?$"
+    },
+    {
+      "page": "/api/humo/leaderboard",
+      "regex": "^/api/humo/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/humo/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/humo/run/finish",
+      "regex": "^/api/humo/run/finish(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/humo/run/finish(?:/)?$"
+    },
+    {
+      "page": "/api/humo/run/start",
+      "regex": "^/api/humo/run/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/humo/run/start(?:/)?$"
+    },
+    {
+      "page": "/api/pulso/interest",
+      "regex": "^/api/pulso/interest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pulso/interest(?:/)?$"
+    },
+    {
+      "page": "/api/pulso/leaderboard",
+      "regex": "^/api/pulso/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pulso/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/pulso/run/finish",
+      "regex": "^/api/pulso/run/finish(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pulso/run/finish(?:/)?$"
+    },
+    {
+      "page": "/api/pulso/run/start",
+      "regex": "^/api/pulso/run/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/pulso/run/start(?:/)?$"
+    },
+    {
+      "page": "/api/radio/leaderboard",
+      "regex": "^/api/radio/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/radio/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/radio/run/finish",
+      "regex": "^/api/radio/run/finish(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/radio/run/finish(?:/)?$"
+    },
+    {
+      "page": "/api/radio/run/start",
+      "regex": "^/api/radio/run/start(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/radio/run/start(?:/)?$"
+    },
+    {
+      "page": "/humo",
+      "regex": "^/humo(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/humo(?:/)?$"
+    },
+    {
+      "page": "/jugar",
+      "regex": "^/jugar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/jugar(?:/)?$"
+    },
+    {
+      "page": "/lab",
+      "regex": "^/lab(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab(?:/)?$"
+    },
+    {
+      "page": "/lab/anillos",
+      "regex": "^/lab/anillos(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab/anillos(?:/)?$"
+    },
+    {
+      "page": "/lab/radio",
+      "regex": "^/lab/radio(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab/radio(?:/)?$"
+    },
+    {
+      "page": "/lab/ranking",
+      "regex": "^/lab/ranking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab/ranking(?:/)?$"
+    },
+    {
+      "page": "/loop",
+      "regex": "^/loop(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/loop(?:/)?$"
+    },
+    {
+      "page": "/qr",
+      "regex": "^/qr(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/qr(?:/)?$"
+    },
+    {
+      "page": "/radio",
+      "regex": "^/radio(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/radio(?:/)?$"
+    },
+    {
+      "page": "/reel",
+      "regex": "^/reel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reel(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
